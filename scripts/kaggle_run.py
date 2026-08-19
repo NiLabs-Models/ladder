@@ -61,6 +61,65 @@ def require_credentials() -> None:
     )
 
 
+def gpu_quota() -> dict | None:
+    """Remaining GPU quota, or None if it cannot be read.
+
+    Worth checking before a push. Kaggle's advertised free tier is not
+    necessarily what an account actually has -- this one allows 6h/week, not the
+    30h quoted everywhere, and a session that starts with quota left can still
+    run past it, so `used` can exceed `allowed`.
+    """
+    try:
+        from kagglesdk import KaggleClient
+        from kagglesdk.kernels.types.kernels_api_service import (
+            ApiGetAcceleratorQuotaStatisticsRequest,
+        )
+
+        with KaggleClient() as client:
+            resp = client.kernels.kernels_api_client.get_accelerator_quota_statistics(
+                ApiGetAcceleratorQuotaStatisticsRequest()
+            )
+        raw = json.loads(str(resp.gpu_quota))
+    except Exception:
+        return None
+
+    def seconds(value: str) -> float:
+        # The API returns things like "22831.169.0s"; take the leading number.
+        digits = ""
+        for ch in str(value):
+            if ch.isdigit() or (ch == "." and "." not in digits):
+                digits += ch
+            else:
+                break
+        return float(digits or 0)
+
+    used = seconds(raw.get("timeUsed", "0s"))
+    allowed = seconds(raw.get("totalTimeAllowed", "0s"))
+    return {
+        "used_hours": round(used / 3600, 2),
+        "allowed_hours": round(allowed / 3600, 2),
+        "remaining_hours": round(max(0.0, allowed - used) / 3600, 2),
+        "refresh": str(getattr(resp, "quota_refresh_time", "unknown")),
+    }
+
+
+def report_quota(need_hours: float = 0.0) -> None:
+    """Print quota, and say plainly when a run cannot fit."""
+    q = gpu_quota()
+    if q is None:
+        print("gpu quota: unavailable")
+        return
+    print(
+        f"gpu quota: {q['used_hours']}h used of {q['allowed_hours']}h, "
+        f"{q['remaining_hours']}h left, refreshes {q['refresh']}"
+    )
+    if need_hours and q["remaining_hours"] < need_hours:
+        print(
+            f"WARNING: this stage needs about {need_hours}h and only "
+            f"{q['remaining_hours']}h remain. Kaggle will refuse the push."
+        )
+
+
 def slug_for(smoke: bool, stage: str) -> str:
     return SMOKE_SLUG if smoke else STAGE_SLUGS.get(stage, SLUG)
 
@@ -216,6 +275,7 @@ def main() -> int:
     if args.fetch:
         return fetch(args.user, slug)
 
+    report_quota({"train": 5.4, "eval": 5.7, "all": 11.2}.get(args.stage, 0.0))
     push(args.user, args.smoke, args.stage)
     if args.no_wait:
         return 0

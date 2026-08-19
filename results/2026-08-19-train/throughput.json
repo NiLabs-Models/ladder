@@ -1,0 +1,14 @@
+{
+  "train_runtime_seconds": 18178.6,
+  "train_runtime_hours": 5.05,
+  "n_examples": 2271,
+  "total_tokens": 10813978,
+  "tokens_per_second": 594.9,
+  "seconds_per_example": 8.005,
+  "mean_tokens_per_example": 4762,
+  "peak_vram_gb": 6.78,
+  "max_seq_length": 8192,
+  "effective_batch": 16,
+  "max_steps": 150,
+  "gpu": "Tesla T4"
+}

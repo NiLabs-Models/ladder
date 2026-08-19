@@ -1,0 +1,81 @@
+{
+  "name": "ladder-3b-kaggle",
+  "data": {
+    "dataset": "open-r1/codeforces-cots",
+    "config_name": "solutions_py_decontaminated",
+    "split": "train",
+    "max_tokens": 8192,
+    "min_tokens": 256,
+    "min_rating": null,
+    "max_rating": null,
+    "require_finish_reason": "stop",
+    "dedup_by_problem": true,
+    "verify_solutions": true,
+    "verify_max_tests": 4,
+    "verify_timeout": 5.0,
+    "verify_memory_limit_mb": 1024,
+    "verify_workers": 8,
+    "verify_keep_unverifiable": true,
+    "val_fraction": 0.04,
+    "seed": 17,
+    "max_samples": 0
+  },
+  "model": {
+    "base_model": "unsloth/Qwen2.5-Coder-3B-Instruct-bnb-4bit",
+    "max_seq_length": 8192,
+    "load_in_4bit": true,
+    "lora_r": 32,
+    "lora_alpha": 32,
+    "lora_dropout": 0.0,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "use_gradient_checkpointing": "unsloth"
+  },
+  "train": {
+    "output_dir": "/kaggle/working/outputs/ladder-3b-kaggle",
+    "per_device_train_batch_size": 1,
+    "gradient_accumulation_steps": 16,
+    "num_train_epochs": 1.0,
+    "max_steps": 150,
+    "learning_rate": 0.0001,
+    "warmup_ratio": 0.03,
+    "lr_scheduler_type": "cosine",
+    "weight_decay": 0.01,
+    "optim": "adamw_8bit",
+    "max_grad_norm": 0.5,
+    "logging_steps": 5,
+    "save_steps": 75,
+    "save_total_limit": 2,
+    "eval_steps": 100,
+    "seed": 17,
+    "train_on_completions_only": true,
+    "hub_model_id": null,
+    "push_to_hub": false
+  },
+  "eval": {
+    "dataset": "open-r1/codeforces-cots",
+    "config_name": "solutions_py_decontaminated",
+    "split": "train",
+    "num_problems": 40,
+    "samples_per_problem": 1,
+    "problem_types": [
+      "diff"
+    ],
+    "max_new_tokens": 4096,
+    "temperature": 0.0,
+    "top_p": 0.95,
+    "seed": 17,
+    "timeout_seconds": 8.0,
+    "memory_limit_mb": 1024,
+    "max_tests_per_problem": 12,
+    "case_sensitive": false,
+    "results_path": "/kaggle/working/outputs/eval/results.json"
+  }
+}
