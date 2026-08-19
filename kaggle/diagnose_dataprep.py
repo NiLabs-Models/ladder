@@ -95,10 +95,10 @@ save()
 # --------------------------------------------------------------------------
 section("install ladder + datasets")
 subprocess.run("pip install -q 'datasets>=2.19'", shell=True, check=False)
-if not os.path.isdir("/kaggle/working/ladder"):
+if not os.path.isdir("/tmp/ladder"):
     subprocess.run("git clone -q https://github.com/NiLabs-Models/ladder.git "
-                   "/kaggle/working/ladder", shell=True, check=True)
-sys.path.insert(0, "/kaggle/working/ladder/src")
+                   "/tmp/ladder", shell=True, check=True)
+sys.path.insert(0, "/tmp/ladder/src")
 
 # --------------------------------------------------------------------------
 section("H1: streaming cost")

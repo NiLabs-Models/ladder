@@ -18,7 +18,10 @@ import time
 import traceback
 
 REPO = "https://github.com/NiLabs-Models/ladder.git"
-REPO_DIR = "/kaggle/working/ladder"
+# Cloned outside /kaggle/working on purpose: everything under working becomes
+# kernel output, so cloning there put the whole repo in every download and made
+# fetching a 2KB status.json take minutes. Output should be results only.
+REPO_DIR = "/tmp/ladder"
 WORK = "/kaggle/working"
 CONFIG = f"{REPO_DIR}/configs/ladder-3b-kaggle.yaml"
 STATUS_PATH = f"{WORK}/status.json"

@@ -16,7 +16,7 @@ import subprocess
 import sys
 import time
 
-REPO = "/kaggle/working/ladder"
+REPO = "/tmp/ladder"
 OUT_DIR = "/kaggle/working/data/sft"
 CONFIG = f"{REPO}/configs/ladder-3b-kaggle.yaml"
 

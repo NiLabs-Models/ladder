@@ -22,7 +22,7 @@ import time
 
 OLD_SHA = "bfe5708"          # before the sandbox rewrite
 SANDBOX = "src/ladder/eval/sandbox.py"
-REPO = "/kaggle/working/ladder"
+REPO = "/tmp/ladder"
 OUT = "/kaggle/working/ab_result.json"
 N = 60
 

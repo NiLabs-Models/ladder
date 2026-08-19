@@ -62,10 +62,10 @@ print(json.dumps(report, indent=2), flush=True)
 save()
 
 subprocess.run("pip install -q 'datasets>=2.19'", shell=True, check=False)
-if not os.path.isdir("/kaggle/working/ladder"):
+if not os.path.isdir("/tmp/ladder"):
     subprocess.run("git clone -q https://github.com/NiLabs-Models/ladder.git "
-                   "/kaggle/working/ladder", shell=True, check=True)
-sys.path.insert(0, "/kaggle/working/ladder/src")
+                   "/tmp/ladder", shell=True, check=True)
+sys.path.insert(0, "/tmp/ladder/src")
 
 from datasets import load_dataset  # noqa: E402
 
@@ -74,7 +74,7 @@ from ladder.data.filters import FilterStats, apply_filters  # noqa: E402
 from ladder.data.formatting import to_chat_example  # noqa: E402
 from ladder.data.verify import verify_pairs  # noqa: E402
 
-cfg = load_config("/kaggle/working/ladder/configs/ladder-3b-kaggle.yaml")
+cfg = load_config("/tmp/ladder/configs/ladder-3b-kaggle.yaml")
 dcfg = cfg.data
 print(f"\n== running the real pipeline: verify={dcfg.verify_solutions} "
       f"workers={dcfg.verify_workers} tests={dcfg.verify_max_tests} "
