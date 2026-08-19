@@ -1,0 +1,619 @@
+{
+ "description": "Real Codeforces problems with reference solutions that the judge must accept. Generated from open-r1/codeforces-cots. Every entry was verified accepted at fixture-creation time, so any failure is a judge regression.",
+ "source": "open-r1/codeforces-cots :: solutions_py_decontaminated",
+ "problems": [
+  {
+   "id": "153/B",
+   "title": "Binary notation",
+   "problem_type": "diff",
+   "code": "n = int(input())\nprint(bin(n)[2:])",
+   "tests": [
+    {
+     "input": "5\n",
+     "output": "101\n"
+    },
+    {
+     "input": "13\n",
+     "output": "1101\n"
+    },
+    {
+     "input": "126\n",
+     "output": "1111110\n"
+    }
+   ]
+  },
+  {
+   "id": "162/D",
+   "title": "Remove digits",
+   "problem_type": "diff",
+   "code": "print(''.join(c for c in input() if not c.isdigit()))",
+   "tests": [
+    {
+     "input": "VK-Cup-2012!\n",
+     "output": "VK-Cup-!\n"
+    },
+    {
+     "input": "Go,Codeforces!\n",
+     "output": "Go,Codeforces!\n"
+    }
+   ]
+  },
+  {
+   "id": "162/J",
+   "title": "Brackets",
+   "problem_type": "diff",
+   "code": "s = input().strip()\nbalance = 0\nfor c in s:\n    balance += 1 if c == '(' else -1\n    if balance < 0:\n        print(\"NO\")\n        exit()\nprint(\"YES\" if balance == 0 else \"NO\")",
+   "tests": [
+    {
+     "input": "(()(()))()\n",
+     "output": "YES\n"
+    },
+    {
+     "input": "())()\n",
+     "output": "NO\n"
+    }
+   ]
+  },
+  {
+   "id": "100/C",
+   "title": "A+B",
+   "problem_type": "diff",
+   "code": "a = int(input())\nb = int(input())\nprint(a + b)",
+   "tests": [
+    {
+     "input": "2\n3\n",
+     "output": "5\n"
+    },
+    {
+     "input": "1390\n2011\n",
+     "output": "3401\n"
+    },
+    {
+     "input": "12345\n54321\n",
+     "output": "66666\n"
+    }
+   ]
+  },
+  {
+   "id": "285/C",
+   "title": "Building Permutation",
+   "problem_type": "diff",
+   "code": "n = int(input())\na = list(map(int, input().split()))\na.sort()\nprint(sum(abs(x - (i + 1)) for i, x in enumerate(a)))",
+   "tests": [
+    {
+     "input": "3\n-1 -1 2\n",
+     "output": "6\n"
+    },
+    {
+     "input": "2\n3 0\n",
+     "output": "2\n"
+    },
+    {
+     "input": "2\n3 0",
+     "output": "2"
+    }
+   ]
+  },
+  {
+   "id": "124/A",
+   "title": "The number of positions",
+   "problem_type": "diff",
+   "code": "n, a, b = map(int, input().split())\nlower = max(a + 1, n - b)\nprint(max(0, n - lower + 1))",
+   "tests": [
+    {
+     "input": "3 1 1\n",
+     "output": "2"
+    },
+    {
+     "input": "5 2 3\n",
+     "output": "3"
+    },
+    {
+     "input": "3 1 1",
+     "output": "2"
+    }
+   ]
+  },
+  {
+   "id": "379/A",
+   "title": "New Year Candles",
+   "problem_type": "diff",
+   "code": "a, b = map(int, input().split())\ntotal = a\nstubs = a\nwhile stubs >= b:\n    new = stubs // b\n    total += new\n    stubs = stubs % b + new\nprint(total)",
+   "tests": [
+    {
+     "input": "4 2\n",
+     "output": "7\n"
+    },
+    {
+     "input": "6 3\n",
+     "output": "8\n"
+    },
+    {
+     "input": "4 2",
+     "output": "7"
+    }
+   ]
+  },
+  {
+   "id": "386/A",
+   "title": "Second-Price Auction",
+   "problem_type": "diff",
+   "code": "n = int(input())\np = list(map(int, input().split()))\nmax_val = max(p)\nwinner_index = p.index(max_val) + 1\nsecond_max = max(x for x in p if x != max_val)\nprint(winner_index, second_max)",
+   "tests": [
+    {
+     "input": "6\n3 8 2 9 4 14\n",
+     "output": "6 9\n"
+    },
+    {
+     "input": "2\n5 7\n",
+     "output": "2 5\n"
+    },
+    {
+     "input": "3\n10 2 8\n",
+     "output": "1 8\n"
+    }
+   ]
+  },
+  {
+   "id": "706/B",
+   "title": "Interesting drink",
+   "problem_type": "diff",
+   "code": "import bisect\nimport sys\n\ndef main():\n    data = sys.stdin.read().split()\n    ptr = 0\n    n = int(data[ptr])\n    ptr += 1\n    x = list(map(int, data[ptr:ptr + n]))\n    ptr += n\n    x.sort()\n    q = int(data[ptr])\n    ptr += 1\n    res = []\n    for _ in range(q):\n        mi = int(data[ptr])\n        ptr += 1\n        res.append(bisect.bisect_right(x, mi))\n    print('\\n'.join(map(str, res)))\n\nif __name__ == \"__main__\":\n    main()",
+   "tests": [
+    {
+     "input": "5\n3 10 8 6 11\n4\n1\n10\n3\n11\n",
+     "output": "0\n4\n1\n5\n"
+    },
+    {
+     "input": "5\n3 10 8 6 11\n4\n1\n10\n3\n11",
+     "output": "0\n4\n1\n5"
+    },
+    {
+     "input": "5\n868 987 714 168 123\n10\n424\n192\n795\n873\n117\n914\n735\n158\n631\n471",
+     "output": "2\n2\n3\n4\n0\n4\n3\n1\n2\n2"
+    }
+   ]
+  },
+  {
+   "id": "602/A",
+   "title": "Two Bases",
+   "problem_type": "diff",
+   "code": "n, bx = map(int, input().split())\nx = list(map(int, input().split()))\nm, by = map(int, input().split())\ny = list(map(int, input().split()))\n\nx_val = 0\nfor d in x:\n    x_val = x_val * bx + d\n\ny_val = 0\nfor d in y:\n    y_val = y_val * by + d\n\nprint('<' if x_val < y_val else '>' if x_val > y_val else '=')",
+   "tests": [
+    {
+     "input": "7 16\n15 15 4 0 0 7 10\n7 9\n4 8 0 3 1 5 0\n",
+     "output": ">"
+    },
+    {
+     "input": "3 3\n1 0 2\n2 5\n2 4\n",
+     "output": "<"
+    },
+    {
+     "input": "6 2\n1 0 1 1 1 1\n2 10\n4 7\n",
+     "output": "="
+    }
+   ]
+  },
+  {
+   "id": "462/A",
+   "title": "Appleman and Easy Task",
+   "problem_type": "diff",
+   "code": "n = int(input())\ngrid = [input().strip() for _ in range(n)]\n\nfor i in range(n):\n    for j in range(n):\n        count = 0\n        if i > 0 and grid[i-1][j] == 'o':\n            count += 1\n        if i < n-1 and grid[i+1][j] == 'o':\n            count += 1\n        if j > 0 and grid[i][j-1] == 'o':\n            count += 1\n        if j < n-1 and grid[i][j+1] == 'o':\n            count += 1\n        if count % 2 != 0:\n            print(\"NO\")\n            exit()\nprint(\"YES\")",
+   "tests": [
+    {
+     "input": "3\nxxo\nxox\noxx\n",
+     "output": "YES\n"
+    },
+    {
+     "input": "4\nxxxo\nxoxo\noxox\nxxxx\n",
+     "output": "NO\n"
+    },
+    {
+     "input": "3\nxxo\nxox\noxx",
+     "output": "YES"
+    }
+   ]
+  },
+  {
+   "id": "489/B",
+   "title": "BerSU Ball",
+   "problem_type": "diff",
+   "code": "n = int(input())\na = list(map(int, input().split()))\nm = int(input())\nb = list(map(int, input().split()))\n\n# Build adjacency list for each boy to compatible girls\nadj = [[] for _ in range(n)]\nfor i in range(n):\n    ai = a[i]\n    for j in range(m):\n        if abs(ai - b[j]) <= 1:\n            adj[i].append(j)\n\nmatch_to = [-1] * m  # Tracks which boy each girl is matched to\n\ndef bpm(u, visited):\n    for v in adj[u]:\n        if not visited[v]:\n            visited[v] = True\n            if match_to[v] == -1 or bpm(match_to[v], visited):\n                match_to[v] = u\n                return True\n    return False\n\ncount = 0\nfor boy in range(n):\n    visited = [False] * m\n    if bpm(boy, visited):\n        count += 1\n\nprint(count)",
+   "tests": [
+    {
+     "input": "4\n1 2 3 4\n4\n10 11 12 13\n",
+     "output": "0\n"
+    },
+    {
+     "input": "4\n1 4 6 2\n5\n5 1 5 7 9\n",
+     "output": "3\n"
+    },
+    {
+     "input": "5\n1 1 1 1 1\n3\n1 2 3\n",
+     "output": "2\n"
+    }
+   ]
+  },
+  {
+   "id": "388/A",
+   "title": "Fox and Box Accumulation",
+   "problem_type": "diff",
+   "code": "n = int(input())\nx = list(map(int, input().split()))\nx.sort()\npiles = []\nfor s in x:\n    found = False\n    for i in range(len(piles)):\n        if piles[i] <= s:\n            piles[i] += 1\n            found = True\n            break\n    if not found:\n        piles.append(1)\nprint(len(piles))",
+   "tests": [
+    {
+     "input": "9\n0 1 0 2 0 1 1 2 10\n",
+     "output": "3\n"
+    },
+    {
+     "input": "5\n0 1 2 3 4\n",
+     "output": "1\n"
+    },
+    {
+     "input": "3\n0 0 10\n",
+     "output": "2\n"
+    }
+   ]
+  },
+  {
+   "id": "1145/A",
+   "title": "Thanos Sort",
+   "problem_type": "diff",
+   "code": "n = int(input())\narr = list(map(int, input().split()))\n\ndef max_sorted(arr, start, end):\n    is_sorted = True\n    for i in range(start, end):\n        if arr[i] > arr[i+1]:\n            is_sorted = False\n            break\n    if is_sorted:\n        return end - start + 1\n    length = end - start + 1\n    if length == 1:\n        return 1\n    mid = start + (length // 2) - 1\n    left = max_sorted(arr, start, mid)\n    right = max_sorted(arr, mid+1, end)\n    return max(left, right)\n\nprint(max_sorted(arr, 0, len(arr)-1))",
+   "tests": [
+    {
+     "input": "4\n7 6 5 4\n",
+     "output": "1\n"
+    },
+    {
+     "input": "8\n11 12 1 2 13 14 3 4\n",
+     "output": "2\n"
+    },
+    {
+     "input": "4\n1 2 2 4\n",
+     "output": "4\n"
+    }
+   ]
+  },
+  {
+   "id": "816/B",
+   "title": "Karen and Coffee",
+   "problem_type": "diff",
+   "code": "import sys\n\ndef main():\n    n, k, q = map(int, sys.stdin.readline().split())\n    max_temp = 200000\n    diff = [0] * (max_temp + 2)  # 1-based to 200001\n    \n    for _ in range(n):\n        l, r = map(int, sys.stdin.readline().split())\n        diff[l] += 1\n        if r + 1 <= max_temp:\n            diff[r + 1] -= 1\n        else:\n            # r is 200000, so r+1 is 200001, which is within diff's size (index up to 200001)\n            diff[r + 1] -= 1\n    \n    # Compute counts for each temperature\n    counts = [0] * (max_temp + 1)  # 1-based to 200000\n    current = 0\n    for i in range(1, max_temp + 1):\n        current += diff[i]\n        counts[i] = current\n    \n    # Compute prefix sums of admissible temperatures\n    prefix = [0] * (max_temp + 1)\n    current_sum = 0\n    for i in range(1, max_temp + 1):\n        if counts[i] >= k:\n            current_sum += 1\n        prefix[i] = current_sum\n    \n    # Process queries\n    for _ in range(q):\n        a, b = map(int, sys.stdin.readline().split())\n        res = prefix[b] - (prefix[a - 1] if a > 1 else 0)\n        print(res)\n\nif __name__ == \"__main__\":\n    main()",
+   "tests": [
+    {
+     "input": "3 2 4\n91 94\n92 97\n97 99\n92 94\n93 97\n95 96\n90 100\n",
+     "output": "3\n3\n0\n4\n"
+    },
+    {
+     "input": "2 1 1\n1 1\n200000 200000\n90 100\n",
+     "output": "0\n"
+    },
+    {
+     "input": "3 2 4\n91 94\n92 97\n97 99\n92 94\n93 97\n95 96\n90 100",
+     "output": "3\n3\n0\n4"
+    }
+   ]
+  },
+  {
+   "id": "350/A",
+   "title": "TL",
+   "problem_type": "diff",
+   "code": "n, m = map(int, input().split())\na = list(map(int, input().split()))\nb = list(map(int, input().split()))\nmax_a = max(a)\nmin_b = min(b)\nif max_a >= min_b:\n    print(-1)\nelse:\n    for v in range(max_a, min_b):\n        for ai in a:\n            if 2 * ai <= v:\n                print(v)\n                exit()\n    print(-1)",
+   "tests": [
+    {
+     "input": "3 1\n3 4 5\n6\n",
+     "output": "-1\n"
+    },
+    {
+     "input": "3 6\n4 5 2\n8 9 6 10 7 11\n",
+     "output": "5\n"
+    },
+    {
+     "input": "3 6\n4 5 2\n8 9 6 10 7 11",
+     "output": "5"
+    }
+   ]
+  },
+  {
+   "id": "1142/A",
+   "title": "The Beatles",
+   "problem_type": "diff",
+   "code": "import math\n\nn, k = map(int, input().split())\na, b = map(int, input().split())\n\npossible_ds = set()\n\n# Generate possible r_s and c values\nrs = set()\nif a <= k - a:\n    rs.add(a)\n    rs.add(k - a)\nelse:\n    rs.add(k - a)\n    rs.add(a)\n\ncs = set()\nif b <= k - b:\n    cs.add(b)\n    cs.add(k - b)\nelse:\n    cs.add(k - b)\n    cs.add(b)\n\nfor r_s in rs:\n    for c in cs:\n        d = (c - r_s) % k\n        possible_ds.add(d)\n\npossible_steps = []\nnk = n * k\n\nfor d in possible_ds:\n    if d == 0:\n        # Handle d=0 case: steps are n//div for each divisor of n\n        divisors = set()\n        for i in range(1, int(math.isqrt(n)) + 1):\n            if n % i == 0:\n                divisors.add(i)\n                divisors.add(n // i)\n        for div in divisors:\n            possible_steps.append(n // div)\n    else:\n        g = math.gcd(d, nk)\n        possible_steps.append(nk // g)\n\n# Compute min and max steps\nx = min(possible_steps)\ny = max(possible_steps)\n\nprint(x, y)",
+   "tests": [
+    {
+     "input": "3 2\n0 0\n",
+     "output": "1 3\n"
+    },
+    {
+     "input": "2 3\n1 1\n",
+     "output": "1 6\n"
+    },
+    {
+     "input": "1 10\n5 3\n",
+     "output": "5 5\n"
+    }
+   ]
+  },
+  {
+   "id": "592/B",
+   "title": "The Monster and the Squirrel",
+   "problem_type": "diff",
+   "code": "n = int(input())\nprint((n - 2) ** 2)",
+   "tests": [
+    {
+     "input": "5\n",
+     "output": "9\n"
+    },
+    {
+     "input": "3\n",
+     "output": "1\n"
+    },
+    {
+     "input": "5",
+     "output": "9"
+    }
+   ]
+  },
+  {
+   "id": "214/A",
+   "title": "System of Equations",
+   "problem_type": "diff",
+   "code": "n, m = map(int, input().split())\ncount = 0\nmax_a = int(n**0.5)\nfor a in range(max_a + 1):\n    b = n - a * a\n    if b < 0:\n        continue\n    if a + b * b == m:\n        count += 1\nprint(count)",
+   "tests": [
+    {
+     "input": "14 28\n",
+     "output": "1"
+    },
+    {
+     "input": "9 3\n",
+     "output": "1"
+    },
+    {
+     "input": "4 20\n",
+     "output": "0"
+    }
+   ]
+  },
+  {
+   "id": "325/B",
+   "title": "Stadium and Games",
+   "problem_type": "diff",
+   "code": "import sys\nimport random\nfrom math import gcd\n\ndef input():\n    return sys.stdin.read()\n\ndef is_prime(n):\n    if n < 2:\n        return False\n    for p in [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31]:\n        if n % p == 0:\n            return n == p\n    d = n - 1\n    s = 0\n    while d % 2 == 0:\n        d //= 2\n        s += 1\n    for a in [2, 325, 9375, 28178, 450775, 9780504, 1795265022]:\n        if a >= n:\n            continue\n        x = pow(a, d, n)\n        if x == 1 or x == n - 1:\n            continue\n        for _ in range(s - 1):\n            x = pow(x, 2, n)\n            if x == n - 1:\n                break\n        else:\n            return False\n    return True\n\ndef pollards_rho(n):\n    if n % 2 == 0:\n        return 2\n    if n % 3 == 0:\n        return 3\n    if n % 5 == 0:\n        return 5\n    while True:\n        c = random.randint(1, n - 1)\n        f = lambda x: (pow(x, 2, n) + c) % n\n        x, y, d = 2, 2, 1\n        while d == 1:\n            x = f(x)\n            y = f(f(y))\n            d = gcd(abs(x - y), n)\n        if d != n:\n            return d\n\ndef factor(n):\n    factors = []\n    def _factor(n):\n        if n == 1:\n            return\n        if is_prime(n):\n            factors.append(n)\n            return\n        d = pollards_rho(n)\n        _factor(d)\n        _factor(n // d)\n    _factor(n)\n    factors.sort()\n    return factors\n\ndef get_prime_factors(n):\n    if n == 1:\n        return []\n    factors = factor(n)\n    res = {}\n    for p in factors:\n        res[p] = res.get(p, 0) + 1\n    return sorted(res.items())\n\ndef generate_divisors(factors):\n    divisors = [1]\n    for (p, e) in factors:\n        temp = []\n        for d in divisors:\n            current = 1\n            for _ in range(e + 1):\n                temp.append(d * current)\n                current *= p\n        divisors = temp\n    return divisors\n\ndef solve():\n    n = int(input().strip())\n    solutions = set()\n\n    # Case 1: m=1\n    if (n + 1) & n == 0 and n + 1 != 0:\n        solutions.add(n + 1)\n\n    # Case 2: m >=3, odd, divisor of 2n\n    two_n = 2 * n\n    O = two_n\n    a = 0\n    while O % 2 == 0:\n        O //= 2\n        a += 1\n    if O != 0:\n        factors = get_prime_factors(O)\n        divisors = generate_divisors(factors)\n        for d in divisors:\n            if d >= 3 and d % 2 == 1:\n                m = d\n                A = two_n // m\n                temp = A - (m - 3)\n                if temp > 0 and temp % 2 == 0:\n                    x = temp // 2\n                    if x != 0 and (x & (x - 1)) == 0:\n                        solutions.add(m * x)\n\n    solutions = sorted(solutions)\n    if solutions:\n        for k in solutions:\n            print(k)\n    else:\n        print(-1)\n\nif __name__ == \"__main__\":\n    solve()",
+   "tests": [
+    {
+     "input": "25\n",
+     "output": "20\n"
+    },
+    {
+     "input": "3\n",
+     "output": "3\n4\n"
+    },
+    {
+     "input": "2\n",
+     "output": "-1\n"
+    }
+   ]
+  },
+  {
+   "id": "632/A",
+   "title": "Grandma Laura and Apples",
+   "problem_type": "diff",
+   "code": "n, p = map(int, input().split())\nactions = [input().strip() for _ in range(n)]\ntotal = 0\nx = 0\nfor action in reversed(actions):\n    if action == 'halfplus':\n        x = 2 * x + 1\n    else:\n        x = 2 * x\n    total += (x * p) // 2\nprint(total)",
+   "tests": [
+    {
+     "input": "2 10\nhalf\nhalfplus\n",
+     "output": "15\n"
+    },
+    {
+     "input": "3 10\nhalfplus\nhalfplus\nhalfplus\n",
+     "output": "55\n"
+    },
+    {
+     "input": "2 10\nhalf\nhalfplus",
+     "output": "15"
+    }
+   ]
+  },
+  {
+   "id": "929/C",
+   "title": "\u041a\u0440\u0430\u0441\u0438\u0432\u0430\u044f \u043a\u043e\u043c\u0430\u043d\u0434\u0430",
+   "problem_type": "diff",
+   "code": "import bisect\nimport math\n\ng, d, f = map(int, input().split())\ngoalies = list(map(int, input().split()))\ndefenders = list(map(int, input().split()))\nforwards = list(map(int, input().split()))\n\ngoalies_sorted = sorted(goalies)\ndefenders_sorted = sorted(defenders)\nforwards_sorted = sorted(forwards)\n\nnum_to_pos = {}\nfor num in goalies:\n    num_to_pos[num] = 'G'\nfor num in defenders:\n    num_to_pos[num] = 'D'\nfor num in forwards:\n    num_to_pos[num] = 'F'\n\ntotal = 0\nall_players = goalies + defenders + forwards\n\nfor x in all_players:\n    pos = num_to_pos[x]\n    g_count = bisect.bisect_right(goalies_sorted, 2 * x) - bisect.bisect_left(goalies_sorted, x)\n    d_count = bisect.bisect_right(defenders_sorted, 2 * x) - bisect.bisect_left(defenders_sorted, x)\n    f_count = bisect.bisect_right(forwards_sorted, 2 * x) - bisect.bisect_left(forwards_sorted, x)\n    \n    if pos == 'G':\n        if d_count >= 2 and f_count >= 3:\n            total += math.comb(d_count, 2) * math.comb(f_count, 3)\n    elif pos == 'D':\n        if g_count >= 1 and d_count >= 2 and f_count >= 3:\n            total += g_count * (d_count - 1) * math.comb(f_count, 3)\n    elif pos == 'F':\n        if g_count >= 1 and d_count >= 2 and f_count >= 3:\n            total += g_count * math.comb(d_count, 2) * math.comb(f_count - 1, 2)\n\nprint(total)",
+   "tests": [
+    {
+     "input": "1 2 3\n15\n10 19\n20 11 13",
+     "output": "1"
+    },
+    {
+     "input": "2 3 4\n16 40\n20 12 19\n13 21 11 10",
+     "output": "6"
+    },
+    {
+     "input": "4 4 5\n15 16 19 6\n8 11 9 18\n5 3 1 12 14",
+     "output": "0"
+    }
+   ]
+  },
+  {
+   "id": "1438/E",
+   "title": "Yurii Can Do Everything",
+   "problem_type": "diff",
+   "code": "n = int(input())\na = list(map(int, input().split()))\nprefix = [0] * (n + 1)\nfor i in range(n):\n    prefix[i + 1] = prefix[i] + a[i]\ncount = 0\nmax_len = 60\nfor l in range(n):\n    r = l + 2\n    if r < n:\n        if (a[l] ^ a[r]) == a[l + 1]:\n            count += 1\n    upper = min(l + max_len, n - 1)\n    for r in range(l + 3, upper + 1):\n        sum_total = prefix[r + 1] - prefix[l]\n        or_val = a[l] | a[r]\n        if sum_total == 2 * or_val:\n            count += 1\nprint(count)",
+   "tests": [
+    {
+     "input": "10\n997230370 58052053 240970544 715275815 250707702 156801523 44100666 64791577 43523002 480196854\n",
+     "output": "2\n"
+    },
+    {
+     "input": "8\n3 1 2 3 1 2 3 15\n",
+     "output": "6\n"
+    },
+    {
+     "input": "10\n512647258 29130422 386945218 423464437 1022947864 244293674 452 216 953 822\n",
+     "output": "0\n"
+    }
+   ]
+  },
+  {
+   "id": "332/A",
+   "title": "Down the Hatch!",
+   "problem_type": "diff",
+   "code": "n = int(input())\ns = input().strip()\nm = len(s)\n\n# Initialize DP: keys are tuples (last three moves), values are the max count\ncurrent_dp = {(None, None, None): 0}\n\nfor i in range(m):\n    next_dp = {}\n    is_vasya = (i % n) == 0\n    for (last_three, count) in current_dp.items():\n        if is_vasya:\n            # Vasya can choose 'a' or 'b'\n            for choice in ['a', 'b']:\n                a_prev, b_prev, c_prev = last_three\n                new_last_three = (b_prev, c_prev, choice)\n                new_count = count\n                if i >= 3:\n                    # Check if previous three (i-3, i-2, i-1) and current (i) are same\n                    if a_prev == b_prev == c_prev == choice:\n                        new_count += 1\n                # Update next_dp\n                if new_last_three in next_dp:\n                    if new_count > next_dp[new_last_three]:\n                        next_dp[new_last_three] = new_count\n                else:\n                    next_dp[new_last_three] = new_count\n        else:\n            # Use fixed character from s\n            new_char = s[i]\n            a_prev, b_prev, c_prev = last_three\n            new_last_three = (b_prev, c_prev, new_char)\n            new_count = count\n            # Update next_dp\n            if new_last_three in next_dp:\n                if new_count > next_dp[new_last_three]:\n                    next_dp[new_last_three] = new_count\n            else:\n                next_dp[new_last_three] = new_count\n    current_dp = next_dp\n\nif current_dp:\n    print(max(current_dp.values()))\nelse:\n    print(0)",
+   "tests": [
+    {
+     "input": "4\nabbba\n",
+     "output": "1\n"
+    },
+    {
+     "input": "4\nabbab\n",
+     "output": "0\n"
+    },
+    {
+     "input": "4\nabbba",
+     "output": "1"
+    }
+   ]
+  },
+  {
+   "id": "914/H",
+   "title": "Ember and Storm's Tree Game",
+   "problem_type": "diff",
+   "code": "n, d, m = map(int, input().split())\n\nif not ((d >= 2 and n >= 2) or (d == 1 and n == 2)):\n    print(0)\nelse:\n    if d == 1 and n == 2:\n        print(4 % m)\n    else:\n        mod = 2 * m\n        fact = 1\n        for i in range(2, n + 1):\n            fact = (fact * i) % mod\n        fact = (fact // 2) % m\n        total = (fact * 2 * n * (n - 1)) % m\n        print(total)",
+   "tests": [
+    {
+     "input": "3 2 100\n",
+     "output": "36\n"
+    },
+    {
+     "input": "2 1 1000000007\n",
+     "output": "4\n"
+    },
+    {
+     "input": "3 1 250\n",
+     "output": "0\n"
+    }
+   ]
+  },
+  {
+   "id": "457/C",
+   "title": "Elections",
+   "problem_type": "diff",
+   "code": "import heapq\nfrom collections import defaultdict\n\ndef main():\n    n = int(input())\n    voters = []\n    me = 0\n    candidate_bribes = defaultdict(list)\n    for _ in range(n):\n        a, b = map(int, input().split())\n        if a == 0:\n            me += 1\n        else:\n            candidate_bribes[a].append(b)\n    \n    if not candidate_bribes:\n        print(0)\n        return\n    \n    other_candidates = []\n    vote_counts = []\n    prefix_sums = {}\n    sorted_bribes = {}\n    for c in candidate_bribes:\n        bribes = candidate_bribes[c]\n        bribes.sort()\n        sorted_bribes[c] = bribes\n        vote_counts.append(len(bribes))\n        ps = [0] * (len(bribes) + 1)\n        for i in range(len(bribes)):\n            ps[i+1] = ps[i] + bribes[i]\n        prefix_sums[c] = ps\n        other_candidates.append(c)\n    \n    vote_counts.sort(reverse=True)\n    if me > vote_counts[0]:\n        print(0)\n        return\n    \n    max_other = vote_counts[0]\n    low = me + 1\n    high = me + sum(len(v) for v in candidate_bribes.values())\n    best_k = high\n    \n    while low <= high:\n        mid = (low + high) // 2\n        sum_required = 0\n        for vc in vote_counts:\n            if vc > mid -1:\n                sum_required += (vc - (mid -1))\n        if sum_required <= mid - me:\n            best_k = mid\n            high = mid -1\n        else:\n            low = mid +1\n    \n    K_min = best_k\n    max_additional = 200\n    max_K = K_min + max_additional\n    min_cost = float('inf')\n    \n    for K in range(K_min, max_K +1):\n        sum_required = 0\n        sum_x = 0\n        for c in other_candidates:\n            vc = len(sorted_bribes[c])\n            x_c = max(0, vc - (K-1))\n            sum_x += x_c\n            if x_c >0:\n                sum_required += prefix_sums[c][x_c]\n        if sum_x > (K - me):\n            continue\n        rem = (K - me) - sum_x\n        if rem <0:\n            continue\n        \n        heap = []\n        for c in other_candidates:\n            vc = len(sorted_bribes[c])\n            x_c = max(0, vc - (K-1))\n            if x_c < len(sorted_bribes[c]):\n                heapq.heappush(heap, (sorted_bribes[c][x_c], c, x_c))\n        \n        optional_sum =0\n        count =0\n        temp_heap = []\n        for entry in heap:\n            heapq.heappush(temp_heap, entry)\n        heap = temp_heap\n        \n        while count < rem and heap:\n            cost, c, index = heapq.heappop(heap)\n            optional_sum += cost\n            count +=1\n            if index +1 < len(sorted_bribes[c]):\n                heapq.heappush(heap, (sorted_bribes[c][index+1], c, index+1))\n        \n        if count < rem:\n            continue\n        \n        total_cost = sum_required + optional_sum\n        if total_cost < min_cost:\n            min_cost = total_cost\n    \n    print(min_cost if min_cost != float('inf') else 0)\n\nif __name__ == \"__main__\":\n    main()",
+   "tests": [
+    {
+     "input": "4\n1 2\n1 2\n2 1\n0 0\n",
+     "output": "2\n"
+    },
+    {
+     "input": "5\n1 2\n1 2\n1 2\n2 1\n0 0\n",
+     "output": "3\n"
+    },
+    {
+     "input": "1\n100000 0\n",
+     "output": "0\n"
+    }
+   ]
+  },
+  {
+   "id": "1042/D",
+   "title": "Petya and Array",
+   "problem_type": "diff",
+   "code": "import bisect\n\nclass FenwickTree:\n    def __init__(self, size):\n        self.size = size\n        self.tree = [0] * (self.size + 2)  # 1-based indexing\n\n    def update(self, idx, delta):\n        while idx <= self.size:\n            self.tree[idx] += delta\n            idx += idx & -idx\n\n    def query(self, idx):\n        res = 0\n        while idx > 0:\n            res += self.tree[idx]\n            idx -= idx & -idx\n        return res\n\nn, t = map(int, input().split())\na = list(map(int, input().split()))\n\nprefix_sums = [0]\ncurrent_sum = 0\nfor num in a:\n    current_sum += num\n    prefix_sums.append(current_sum)\n\nall_values = []\nfor s in prefix_sums:\n    all_values.append(s)\nfor i in range(1, len(prefix_sums)):\n    all_values.append(prefix_sums[i] - t)\n\n# Compress coordinates\nsorted_unique = sorted(set(all_values))\ncompressed = sorted_unique\nbit_size = len(compressed)\n\nbit = FenwickTree(bit_size)\n\n# Insert s_0\ns0 = prefix_sums[0]\nidx = bisect.bisect_left(compressed, s0)\nbit.update(idx + 1, 1)\n\ntotal = 0\nfor r in range(1, len(prefix_sums)):\n    s_r = prefix_sums[r]\n    query_x = s_r - t\n\n    # Find number of elements > query_x in BIT\n    idx_q = bisect.bisect_right(compressed, query_x)\n    count = bit.query(bit_size) - bit.query(idx_q)\n    total += count\n\n    # Insert s_r into BIT\n    idx_insert = bisect.bisect_left(compressed, s_r)\n    bit.update(idx_insert + 1, 1)\n\nprint(total)",
+   "tests": [
+    {
+     "input": "5 4\n5 -1 3 4 -1\n",
+     "output": "5"
+    },
+    {
+     "input": "3 0\n-1 2 -3\n",
+     "output": "4"
+    },
+    {
+     "input": "4 -1\n-2 1 -2 3\n",
+     "output": "3"
+    }
+   ]
+  },
+  {
+   "id": "710/E",
+   "title": "Generate a String",
+   "problem_type": "diff",
+   "code": "n, x, y = map(int, input().split())\n\nif n == 0:\n    print(0)\n    exit()\n\nmin_cost = n * x  # Cost to insert all\n\nmax_c = 0\npower = 1\nwhile power <= 2 * n:\n    max_c += 1\n    power <<= 1\n\nfor c in range(1, max_c + 1):\n    power = 1 << c\n    k_floor = n // power\n    k_candidates = set()\n    # Check possible k values around the floor division\n    for dk in (-1, 0, 1):\n        k = k_floor + dk\n        if k >= 1:\n            k_candidates.add(k)\n    # Also consider k=1 in case k_floor was 0\n    k_candidates.add(1)\n    \n    for k in k_candidates:\n        current = k * power\n        diff = abs(current - n)\n        cost = k * x + c * y + diff * x\n        if cost < min_cost:\n            min_cost = cost\n\nprint(min_cost)",
+   "tests": [
+    {
+     "input": "8 1 10\n",
+     "output": "8"
+    },
+    {
+     "input": "8 1 1\n",
+     "output": "4"
+    },
+    {
+     "input": "8 1 1",
+     "output": "4"
+    }
+   ]
+  },
+  {
+   "id": "606/A",
+   "title": "Magic Spheres",
+   "problem_type": "diff",
+   "code": "a, b, c = map(int, input().split())\nx, y, z = map(int, input().split())\n\ndeficit = max(0, x - a) + max(0, y - b) + max(0, z - c)\nif deficit == 0:\n    print(\"Yes\")\nelse:\n    surplus = (a - x if a > x else 0) // 2\n    surplus += (b - y if b > y else 0) // 2\n    surplus += (c - z if c > z else 0) // 2\n    print(\"Yes\" if surplus >= deficit else \"No\")",
+   "tests": [
+    {
+     "input": "3 3 3\n2 2 2\n",
+     "output": "Yes\n"
+    },
+    {
+     "input": "5 6 1\n2 7 2\n",
+     "output": "No\n"
+    },
+    {
+     "input": "4 4 0\n2 1 2\n",
+     "output": "Yes\n"
+    }
+   ]
+  },
+  {
+   "id": "683/H",
+   "title": "Exchange of Books",
+   "problem_type": "diff",
+   "code": "n, k = map(int, input().split())\na = list(map(int, input().split()))\n\nf = [0] * (n + 1)\nfor i in range(n):\n    j = a[i]\n    f[j] = i + 1\n\nvisited = [False] * (n + 1)\nres = [0] * (n + 1)\n\nfor i in range(1, n + 1):\n    if not visited[i]:\n        cycle = []\n        current = i\n        while not visited[current]:\n            visited[current] = True\n            cycle.append(current)\n            current = f[current]\n        m = len(cycle)\n        shift = k % m\n        for idx in range(m):\n            new_idx = (idx + shift) % m\n            res[cycle[idx]] = cycle[new_idx]\n\nprint(' '.join(map(str, res[1:n+1])))",
+   "tests": [
+    {
+     "input": "4 1\n2 4 1 3\n",
+     "output": "3 1 4 2 \n"
+    },
+    {
+     "input": "5 5\n3 4 5 2 1\n",
+     "output": "3 4 5 2 1 \n"
+    },
+    {
+     "input": "6 18\n2 3 5 1 6 4\n",
+     "output": "1 2 3 4 5 6 \n"
+    }
+   ]
+  },
+  {
+   "id": "633/A",
+   "title": "Ebony and Ivory",
+   "problem_type": "diff",
+   "code": "import sys\n\na, b, c = map(int, input().split())\n\nif a > b:\n    max_x = c // a\n    for x in range(max_x + 1):\n        rem = c - a * x\n        if rem >= 0 and rem % b == 0:\n            print(\"Yes\")\n            sys.exit()\nelse:\n    max_y = c // b\n    for y in range(max_y + 1):\n        rem = c - b * y\n        if rem >= 0 and rem % a == 0:\n            print(\"Yes\")\n            sys.exit()\n\nprint(\"No\")",
+   "tests": [
+    {
+     "input": "6 11 6\n",
+     "output": "YES"
+    },
+    {
+     "input": "3 2 7\n",
+     "output": "YES"
+    },
+    {
+     "input": "4 6 15\n",
+     "output": "NO"
+    }
+   ],
+   "note": "reference solution differs from the expected file only in letter case"
+  }
+ ]
+}

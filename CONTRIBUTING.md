@@ -62,4 +62,16 @@ reported every result:
 - `checker` problems have many valid outputs and cannot be scored by exact match.
 - Codeforces accepts `Yes`/`yes`/`YES` interchangeably; exact match did not.
 
-If you change the judge, run that check and put the numbers in the PR.
+That check is `scripts/validate_judge.py`:
+
+```bash
+python scripts/validate_judge.py          # offline fixture, runs in CI
+python scripts/validate_judge.py --live 100   # fresh rows from the dataset
+```
+
+The offline mode judges 31 real problems whose solutions are known-correct and
+must all be accepted; it is a hard pass/fail and CI runs it. The live mode
+streams fresh traces and reports an agreement *rate* — those traces are
+model-generated, so a number well below 100% is expected and normal there.
+
+If you change the judge, run the live mode and put the rate in the PR.

@@ -31,3 +31,10 @@ jobs:
       - run: pip install pyyaml pytest ruff
       - run: ruff check .
       - run: pytest -q
+
+      # Runs the judge against 31 real Codeforces problems with known-correct
+      # solutions. Offline (committed fixture), so no network and no flake.
+      # A failure here means published numbers are wrong, not just that a test
+      # broke -- hence its own step, so it is obvious in the checks list.
+      - name: judge ground truth
+        run: python scripts/validate_judge.py
