@@ -46,23 +46,9 @@ STATUS_PATH = f"{WORK}/status.json"
 STAGE = os.environ.get("LADDER_STAGE", "all")
 
 
-def find_adapter():
-    """Locate a trained adapter mounted from the training kernel's output."""
-    import glob
-
-    hits = sorted(glob.glob("/kaggle/input/**/adapter_config.json", recursive=True))
-    return os.path.dirname(hits[0]) if hits else None
-
-
-def find_prepared_data():
-    """Locate train.jsonl under /kaggle/input, wherever Kaggle mounted it."""
-    import glob
-
-    hits = sorted(glob.glob("/kaggle/input/**/train.jsonl", recursive=True))
-    return os.path.dirname(hits[0]) if hits else f"{WORK}/data/sft"
-
-
-DATA_DIR = find_prepared_data()
+# Mount discovery lives in ladder.kaggle_paths, which is importable and tested.
+# It is resolved after setup() clones the repo, not at module import.
+DATA_DIR = None
 
 STATUS = {"stages": {}, "started": time.time()}
 
@@ -180,6 +166,14 @@ def setup():
 run_stage("setup", setup)
 sys.path.insert(0, f"{REPO_DIR}/src")
 
+from ladder.kaggle_paths import (  # noqa: E402
+    describe_mounts,
+    find_adapter,
+    find_prepared_data,
+)
+
+DATA_DIR = find_prepared_data() or f"{WORK}/data/sft"
+
 from ladder.config import load_config  # noqa: E402
 
 cfg = load_config(CONFIG)
@@ -220,14 +214,7 @@ def use_prepared_data():
     if not os.path.exists(train_file):
         # Show what IS mounted. A failure here is nearly always a kernel_sources
         # wiring problem, and the listing says immediately which.
-        mounted = []
-        for root, dirs, files in os.walk("/kaggle/input"):
-            depth = root.count("/") - 2
-            if depth <= 2:
-                mounted.append(f"  {root}: {sorted(files)[:6]}")
-            if depth > 2:
-                dirs[:] = []
-        listing = '\n'.join(mounted) or "  (nothing mounted under /kaggle/input)"
+        listing = describe_mounts()
         raise RuntimeError(
             "no prepared data found. Looked for train.jsonl under "
             f"/kaggle/input and fell back to {DATA_DIR}.\n"
