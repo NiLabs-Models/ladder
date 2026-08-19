@@ -148,6 +148,23 @@ Held-out problems are selected by hashing the problem id with the training seed,
 so the eval set is exactly the split that data prep withheld. It is not a
 separate sample that might overlap with training.
 
+That is an argument, so there is also a check:
+
+```bash
+python scripts/check_contamination.py --config configs/ladder-3b-kaggle.yaml --data data/sft
+```
+
+It compares the built training set against the problems the eval harness would
+actually load, and fails on any overlap. It also compares *aliases*: Codeforces
+cross-posts problems between divisions, so `1149/C` and `1150/E` are one problem
+under two ids that hash to different sides of the split. In
+`solutions_py_decontaminated` that is harmless — 1000 sampled rows had 1000
+unique ids and no alias present as its own row — but that is a property of the
+dataset, not of the pipeline, and a different source could break it quietly.
+
+Every run's artifacts are committed under [`results/`](results/), so a published
+number can be checked by someone who was not there.
+
 ## Design notes
 
 **Why 3B.** A 16GB T4 fits a 3B base in 4-bit with an 8192-token context and room

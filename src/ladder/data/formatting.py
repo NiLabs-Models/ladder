@@ -102,6 +102,10 @@ def to_chat_example(row: dict[str, Any]) -> dict[str, Any] | None:
 
     return {
         "problem_id": row.get("id"),
+        # Codeforces cross-posts problems between div1 and div2 rounds, so the
+        # same problem has more than one id. Carried through so contamination
+        # checking can tell that two ids name one problem.
+        "aliases": [a for a in (row.get("aliases") or []) if a],
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user},

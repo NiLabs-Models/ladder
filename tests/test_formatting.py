@@ -76,3 +76,14 @@ def test_extract_code_ignores_empty_blocks():
 def test_extract_code_returns_none_when_there_is_no_block():
     assert extract_code("I could not solve this problem.") is None
     assert extract_code("") is None
+
+
+def test_chat_example_carries_aliases():
+    # Cross-posted problems have several ids; contamination checking needs them.
+    row = dict(ROW, aliases=["1150/E"])
+    assert to_chat_example(row)["aliases"] == ["1150/E"]
+
+
+def test_chat_example_aliases_default_to_empty():
+    assert to_chat_example(ROW)["aliases"] == []
+    assert to_chat_example(dict(ROW, aliases=None))["aliases"] == []
