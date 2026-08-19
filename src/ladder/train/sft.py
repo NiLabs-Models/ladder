@@ -136,7 +136,7 @@ def train(cfg: RunConfig, data_dir: str | Path) -> str:
 
     # Throughput, so the next run can be sized by arithmetic instead of a guess.
     runtime = stats.metrics.get("train_runtime")
-    if runtime:
+    if runtime is not None:
         effective_batch = tcfg.per_device_train_batch_size * tcfg.gradient_accumulation_steps
         total_tokens, n_examples = count_trained_tokens(
             train_file, tcfg.max_steps, effective_batch
