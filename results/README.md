@@ -24,4 +24,10 @@ way to publish a number that means nothing.
 
 ## Runs
 
-_None yet. The first is training._
+| Run | Outcome |
+| --- | --- |
+| [2026-08-18-failed-run](2026-08-18-failed-run/) | Failed. Killed at the session cap during data prep; no model. |
+
+Failed runs are recorded too. A results directory that only holds successes is a
+worse record than no directory, and the failure above is where most of what this
+project knows about its own hardware came from.
