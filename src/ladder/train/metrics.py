@@ -21,26 +21,30 @@ def count_trained_tokens(
     max_steps: int,
     effective_batch: int,
 ) -> tuple[int, int]:
-    """Total tokens actually fed to the optimizer, and how many examples that was.
+    """Total tokens actually fed to the optimizer, and how many examples had token counts.
 
     A capped run (`max_steps`) consumes only the first `max_steps * batch`
     examples, so summing the whole file would overstate throughput by however
-    much of the corpus went untouched.
+    much of the corpus went untouched. Examples missing `n_tokens` are ignored in
+    the returned example count.
     """
     limit = max_steps * effective_batch if max_steps else None
 
-    total = seen = 0
+    total = 0
+    counted = 0
+    consumed = 0
     with open(jsonl_path, encoding="utf-8") as fh:
         for line in fh:
-            if limit is not None and seen >= limit:
+            if limit is not None and consumed >= limit:
                 break
             record = json.loads(line)
+            consumed += 1
             n = record.get("n_tokens")
             if n is None:
                 continue
             total += n
-            seen += 1
-    return total, seen
+            counted += 1
+    return total, counted
 
 
 def summarize(
