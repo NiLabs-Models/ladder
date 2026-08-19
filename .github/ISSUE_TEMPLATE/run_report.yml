@@ -1,0 +1,70 @@
+name: Training run result
+description: Report the numbers from a run so they can go in the results table
+labels: ["run-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A pass@1 number without the problem set it was measured on is not a
+        result. Please include enough that someone else could reproduce it.
+
+  - type: input
+    id: base_model
+    attributes:
+      label: Base model
+      placeholder: unsloth/Qwen2.5-Coder-3B-Instruct-bnb-4bit
+    validations:
+      required: true
+
+  - type: input
+    id: config
+    attributes:
+      label: Config
+      placeholder: configs/ladder-3b-kaggle.yaml
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: Commit SHA
+    validations:
+      required: true
+
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU and wall-clock time
+      placeholder: "T4 16GB, 6h40m"
+    validations:
+      required: true
+
+  - type: textarea
+    id: numbers
+    attributes:
+      label: Results
+      description: Base and tuned on the same held-out problems.
+      value: |
+        | model | problems | pass@1 |
+        | --- | --- | --- |
+        | base |  |  |
+        | tuned |  |  |
+    validations:
+      required: true
+
+  - type: textarea
+    id: verdicts
+    attributes:
+      label: Verdict breakdown
+      description: From results.json. Tells you *how* it failed, not just that it did.
+      render: json
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Sanity checks
+      options:
+        - label: The base model was scored on the same problems with the same prompt
+          required: true
+        - label: Held-out problems came from the split, not a fresh sample
+          required: true

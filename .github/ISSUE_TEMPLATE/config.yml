@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security expectations for the sandbox
+    url: https://github.com/NiLabs-Models/ladder/blob/main/SECURITY.md
+    about: The eval executes model-generated code. Read this before reporting sandbox escapes.

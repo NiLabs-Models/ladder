@@ -1,0 +1,60 @@
+name: Bug report
+description: Something in the pipeline behaves incorrectly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If this is about the **judge** — a solution scored wrong, a verdict that
+        looks incorrect — please include the problem id. Judge bugs silently
+        distort every published number, so they are the highest-priority kind.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      placeholder: |
+        ladder eval --config configs/smoke-1.5b.yaml --num-problems 5
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: config
+    attributes:
+      label: Config used
+      placeholder: configs/ladder-3b-kaggle.yaml
+
+  - type: input
+    id: commit
+    attributes:
+      label: Commit SHA
+      placeholder: git rev-parse --short HEAD
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where were you running
+      options:
+        - Kaggle
+        - Colab
+        - Rented GPU
+        - Local CPU (data prep / tests only)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output
+      description: Traceback, or the relevant part of the run log.
+      render: shell

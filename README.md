@@ -1,5 +1,9 @@
 # Ladder
 
+[![ci](https://github.com/NiLabs-Models/ladder/actions/workflows/ci.yml/badge.svg)](https://github.com/NiLabs-Models/ladder/actions/workflows/ci.yml)
+[![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
+
 Small open models fine-tuned for competitive programming, trained on free GPUs.
 
 Ladder is a QLoRA fine-tuning and evaluation pipeline for Codeforces-style
@@ -190,7 +194,21 @@ hostile code, which can still reach the filesystem and the network. Run evals
 inside a container or a disposable VM. Kaggle and Colab already give you one,
 which is the environment this is designed for.
 
+## Contributing
+
+Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The open issues
+are the roadmap; the ones tagged `good first issue` are self-contained and do not
+need a GPU.
+
+If you run a training job, please file a
+[run report](https://github.com/NiLabs-Models/ladder/issues/new?template=run_report.yml)
+with the numbers. Measured throughput on real hardware is the main thing this
+project is short of.
+
 ## License
 
 Apache-2.0. The upstream dataset and base models carry their own licenses —
 `open-r1/codeforces-cots` is ODC-BY, `Qwen2.5-Coder` is Apache-2.0.
+
+Generated code is executed during evaluation. Read [SECURITY.md](SECURITY.md)
+before running it anywhere you care about.

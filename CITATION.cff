@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use Ladder, please cite it."
+title: "Ladder: small open models fine-tuned for competitive programming"
+abstract: >-
+  A QLoRA fine-tuning and evaluation pipeline for Codeforces-style problems,
+  sized to run on free-tier GPUs. Models are scored by executing generated
+  programs against real test cases rather than by similarity to a reference.
+authors:
+  - name: "NiLabs"
+repository-code: "https://github.com/NiLabs-Models/ladder"
+license: Apache-2.0
+type: software
+keywords:
+  - competitive-programming
+  - qlora
+  - fine-tuning
+  - code-generation
+  - evaluation
