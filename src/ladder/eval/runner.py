@@ -56,10 +56,46 @@ def pass_at_k(n: int, c: int, k: int) -> float:
     return 1.0 - prob
 
 
+def _write_partial(path, cfg, results, verdict_counts) -> None:
+    """Persist progress after every problem.
+
+    Written atomically via a temp file and a replace: a run killed mid-write
+    would otherwise leave truncated JSON, and the resume path would then discard
+    every result it was meant to protect.
+    """
+    payload = {
+        "run": cfg.name,
+        "model": cfg.model.base_model,
+        "complete": False,
+        "n_problems": len(results),
+        "samples_per_problem": cfg.eval.samples_per_problem,
+        "verdicts": dict(verdict_counts),
+        "problems": [asdict(r) for r in results],
+    }
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    tmp.replace(path)
+
+
+def _load_partial(path: Path) -> dict[str, ProblemResult]:
+    """Re-read results from an interrupted run, keyed by problem id."""
+    if not path.exists():
+        return {}
+    try:
+        saved = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+    done = {}
+    for record in saved.get("problems", []):
+        done[record["problem_id"]] = ProblemResult(**record)
+    return done
+
+
 def evaluate(
     generate,
     cfg: RunConfig,
     problems: list[EvalProblem] | None = None,
+    resume: bool = True,
 ) -> dict:
     """Run the eval loop.
 
@@ -73,10 +109,28 @@ def evaluate(
     if not problems:
         raise RuntimeError("no eval problems loaded -- check dataset config and val_fraction")
 
+    out_path = Path(ecfg.results_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Results are written as they are produced, and an interrupted run picks up
+    # where it stopped. A 40-problem eval is hours of generation; losing all of
+    # it to a dropped Colab session or a session cap is avoidable.
+    already = _load_partial(out_path) if resume else {}
+    if already:
+        _log(f"resuming: {len(already)} problems already scored in {out_path}")
+
     results: list[ProblemResult] = []
     verdict_counts: Counter[str] = Counter()
 
     for idx, problem in enumerate(problems, start=1):
+        if problem.problem_id in already:
+            record = already[problem.problem_id]
+            results.append(record)
+            verdict_counts.update(record.verdicts)
+            _log(f"[{idx}/{len(problems)}] -- {problem.problem_id} (already scored)")
+            _write_partial(out_path, cfg, results, verdict_counts)
+            continue
+
         completions = generate(problem.prompt, ecfg.samples_per_problem)
         record = ProblemResult(
             problem_id=problem.problem_id,
@@ -105,6 +159,7 @@ def evaluate(
         results.append(record)
         mark = "AC" if record.solved else record.verdicts[0][:2].upper()
         _log(f"[{idx}/{len(problems)}] {mark:>2}  {problem.problem_id}  {problem.title[:50]}")
+        _write_partial(out_path, cfg, results, verdict_counts)
 
     n = ecfg.samples_per_problem
     metrics = {}
@@ -126,8 +181,6 @@ def evaluate(
         "problems": [asdict(r) for r in results],
     }
 
-    out_path = Path(ecfg.results_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
     _log("\n=== results ===")

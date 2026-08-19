@@ -135,3 +135,87 @@ def test_progress_logging_survives_a_console_that_cannot_encode_the_title(tmp_pa
         lambda p, n: ["```python\nprint(input())\n```"] * n, _cfg(tmp_path), [problem]
     )
     assert summary["metrics"]["pass@1"] == 1.0
+
+
+def test_results_are_written_after_every_problem(tmp_path):
+    """A long eval must not lose everything to a dropped session."""
+    import json
+
+    seen = []
+
+    def generate(prompt, n):
+        # Inspect the file mid-run: results for earlier problems must be there.
+        seen.append(json.loads(results_file.read_text()) if results_file.exists() else None)
+        return ["```python\nprint(sum(map(int, input().split())))\n```"] * n
+
+    cfg = _cfg(tmp_path)
+    results_file = tmp_path / "results.json"
+    problems = [
+        EvalProblem(f"p{i}", f"P{i}", "prompt", [("1 2\n", "3\n")]) for i in range(3)
+    ]
+    evaluate(generate, cfg, problems)
+
+    # Before problem 2 there should already be one scored problem on disk.
+    assert seen[1] is not None and seen[1]["n_problems"] == 1
+    assert seen[2]["n_problems"] == 2
+    assert json.loads(results_file.read_text())["n_problems"] == 3
+
+
+def test_an_interrupted_run_resumes_instead_of_regenerating(tmp_path):
+    cfg = _cfg(tmp_path)
+    problems = [
+        EvalProblem(f"p{i}", f"P{i}", "prompt", [("1 2\n", "3\n")]) for i in range(4)
+    ]
+    correct = "```python\nprint(sum(map(int, input().split())))\n```"
+
+    # First pass dies after two problems.
+    calls = {"n": 0}
+
+    def flaky(prompt, n):
+        calls["n"] += 1
+        if calls["n"] > 2:
+            raise RuntimeError("session dropped")
+        return [correct] * n
+
+    with pytest.raises(RuntimeError):
+        evaluate(flaky, cfg, problems)
+
+    # Second pass only generates for what is missing.
+    resumed = {"n": 0}
+
+    def counting(prompt, n):
+        resumed["n"] += 1
+        return [correct] * n
+
+    summary = evaluate(counting, cfg, problems)
+    assert resumed["n"] == 2, "should regenerate only the two unfinished problems"
+    assert summary["n_problems"] == 4
+    assert summary["metrics"]["pass@1"] == 1.0
+
+
+def test_resume_can_be_disabled(tmp_path):
+    cfg = _cfg(tmp_path)
+    problems = [EvalProblem("p0", "P0", "prompt", [("1 2\n", "3\n")])]
+    correct = "```python\nprint(sum(map(int, input().split())))\n```"
+    evaluate(lambda p, n: [correct] * n, cfg, problems)
+
+    calls = {"n": 0}
+
+    def counting(prompt, n):
+        calls["n"] += 1
+        return [correct] * n
+
+    evaluate(counting, cfg, problems, resume=False)
+    assert calls["n"] == 1, "resume=False must rescore"
+
+
+def test_a_truncated_partial_file_does_not_break_resume(tmp_path):
+    """A run killed mid-write leaves invalid JSON; that must not be fatal."""
+    cfg = _cfg(tmp_path)
+    (tmp_path / "results.json").write_text('{"problems": [', encoding="utf-8")
+    problems = [EvalProblem("p0", "P0", "prompt", [("1 2\n", "3\n")])]
+    summary = evaluate(
+        lambda p, n: ["```python\nprint(sum(map(int, input().split())))\n```"] * n,
+        cfg, problems,
+    )
+    assert summary["n_problems"] == 1
