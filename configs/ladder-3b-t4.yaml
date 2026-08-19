@@ -1,0 +1,52 @@
+# Main run: Qwen2.5-Coder-3B + QLoRA on a single 16GB T4.
+# Fits Kaggle's free tier (30 GPU-h/week). ~9h for one epoch over ~12k traces;
+# Kaggle kills a session at 12h, so checkpoints + resume matter.
+name: ladder-3b-t4
+
+data:
+  dataset: open-r1/codeforces-cots
+  config_name: solutions_py_decontaminated
+  split: train
+  max_tokens: 6144        # anything longer will not fit the 8192 window with the prompt
+  min_tokens: 256
+  require_finish_reason: stop
+  dedup_by_problem: true
+  val_fraction: 0.03
+  seed: 17
+  # Measured on the raw corpus: traces are ~100% correct on easy problems and
+  # ~72% on div1 D/E/G/H. Training on the rest teaches confident wrong answers.
+  # Costs ~8 min of CPU for the full corpus, and zero GPU time.
+  verify_solutions: true
+  verify_max_tests: 5
+  verify_timeout: 6.0
+  verify_workers: 8
+
+model:
+  base_model: unsloth/Qwen2.5-Coder-3B-Instruct-bnb-4bit
+  max_seq_length: 8192
+  load_in_4bit: true
+  lora_r: 32
+  lora_alpha: 32
+  lora_dropout: 0.0
+
+train:
+  output_dir: outputs/ladder-3b-t4
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 16   # effective batch 16; larger OOMs at 8k context on a T4
+  num_train_epochs: 1.0
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.03
+  lr_scheduler_type: cosine
+  optim: adamw_8bit
+  max_grad_norm: 0.5
+  save_steps: 100
+  save_total_limit: 2
+
+eval:
+  num_problems: 100
+  samples_per_problem: 1
+  max_new_tokens: 4096
+  temperature: 0.0
+  timeout_seconds: 10.0
+  max_tests_per_problem: 20
+  results_path: outputs/ladder-3b-t4/eval/results.json

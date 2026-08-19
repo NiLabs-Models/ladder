@@ -1,0 +1,14 @@
+# Installed only on the GPU box (Kaggle / Colab / rented T4-or-better).
+# Unsloth pins a compatible torch/transformers/trl/peft set for us, which is why
+# it is the only hard pin here -- letting pip resolve these independently on a
+# free-tier image is how you lose an hour of your 30 weekly Kaggle GPU hours.
+unsloth==2025.9.1
+unsloth_zoo==2025.9.1
+bitsandbytes>=0.43.0
+trl>=0.9.6,<0.12
+peft>=0.12.0
+transformers>=4.44
+accelerate>=0.33
+datasets>=2.19
+huggingface_hub>=0.24
+pyyaml>=6.0

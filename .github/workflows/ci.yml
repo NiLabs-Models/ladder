@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    # Both, because the sandbox takes a different path on each: rlimits are
+    # POSIX-only, and Windows is where contributors actually run this.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.12"]
+        exclude:
+          - os: windows-latest
+            python-version: "3.10"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      # Only the light deps. Nothing here needs torch, so CI stays under a
+      # minute and does not depend on a CUDA wheel index.
+      - run: pip install pyyaml pytest ruff
+      - run: ruff check .
+      - run: pytest -q

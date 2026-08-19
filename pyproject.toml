@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ladder"
+version = "0.1.0"
+description = "Small open models fine-tuned for competitive programming"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+authors = [{ name = "NiLabs" }]
+keywords = ["llm", "qlora", "competitive-programming", "codeforces", "fine-tuning"]
+
+# Deliberately light. Training pulls in torch/unsloth via requirements-train.txt,
+# which only ever gets installed on a GPU box (Kaggle/Colab).
+dependencies = [
+  "pyyaml>=6.0",
+  "datasets>=2.19",
+  "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.scripts]
+ladder = "ladder.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/NiLabs-Models/ladder"
+Issues = "https://github.com/NiLabs-Models/ladder/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ladder"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+# Notebooks are documentation that happens to execute: they use IPython magics
+# and shell escapes, and their cell order is the point. Linting them fights that.
+extend-exclude = ["notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

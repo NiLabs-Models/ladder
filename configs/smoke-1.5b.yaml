@@ -1,0 +1,35 @@
+# Smoke test: proves the whole pipeline end to end in ~15 minutes on a T4.
+# Run this before burning free GPU hours on the real config.
+name: smoke-1.5b
+
+data:
+  max_tokens: 3072
+  min_tokens: 128
+  max_samples: 200
+  val_fraction: 0.1
+  seed: 17
+  verify_solutions: true   # exercises the judge during the smoke run too
+  verify_max_tests: 3
+  verify_timeout: 5.0
+  verify_workers: 8
+
+model:
+  base_model: unsloth/Qwen2.5-Coder-1.5B-Instruct-bnb-4bit
+  max_seq_length: 4096
+  lora_r: 16
+  lora_alpha: 16
+
+train:
+  output_dir: outputs/smoke-1.5b
+  gradient_accumulation_steps: 4
+  max_steps: 20
+  learning_rate: 2.0e-4
+  logging_steps: 1
+  save_steps: 20
+
+eval:
+  num_problems: 10
+  max_new_tokens: 1024
+  timeout_seconds: 5.0
+  max_tests_per_problem: 5
+  results_path: outputs/smoke-1.5b/eval/results.json

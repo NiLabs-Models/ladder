@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+
+# Run artifacts. Anchored to the repo root so these do not shadow source
+# directories -- an unanchored `data/` would silently swallow src/ladder/data/.
+/data/
+/outputs/
+/runs/
+/checkpoints/
+/wandb/
+*.jsonl
+*.gguf
+*.safetensors
+
+.env
+.DS_Store
