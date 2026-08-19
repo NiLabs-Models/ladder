@@ -53,7 +53,6 @@ def train(cfg: RunConfig, data_dir: str | Path) -> str:
     """Run SFT and save the adapter. Returns the output directory."""
     import torch
     from datasets import load_dataset
-    from transformers import TrainingArguments
 
     data_dir = Path(data_dir)
     train_file = data_dir / "train.jsonl"
@@ -74,53 +73,53 @@ def train(cfg: RunConfig, data_dir: str | Path) -> str:
     )
 
     tcfg = cfg.train
-    args = TrainingArguments(
-        output_dir=tcfg.output_dir,
-        per_device_train_batch_size=tcfg.per_device_train_batch_size,
-        gradient_accumulation_steps=tcfg.gradient_accumulation_steps,
-        num_train_epochs=tcfg.num_train_epochs,
-        max_steps=tcfg.max_steps or -1,
-        learning_rate=tcfg.learning_rate,
-        warmup_ratio=tcfg.warmup_ratio,
-        lr_scheduler_type=tcfg.lr_scheduler_type,
-        weight_decay=tcfg.weight_decay,
-        optim=tcfg.optim,
-        max_grad_norm=tcfg.max_grad_norm,
-        logging_steps=tcfg.logging_steps,
-        save_steps=tcfg.save_steps,
-        save_total_limit=tcfg.save_total_limit,
-        seed=tcfg.seed,
-        # T4 and P100 have no bf16 units; picking the wrong one here is an
-        # instant crash on a free-tier GPU.
-        fp16=not torch.cuda.is_bf16_supported(),
-        bf16=torch.cuda.is_bf16_supported(),
-        report_to="none",
-        save_safetensors=True,
-    )
-
-    # trl's API moved: SFTConfig now carries what used to be TrainingArguments
-    # plus the dataset/length settings, SFTTrainer takes `processing_class`
-    # rather than `tokenizer`, and DataCollatorForCompletionOnlyLM is gone.
-    # Built by capability detection rather than a version pin -- pinning a
-    # version chosen without checking it against the target environment is what
-    # broke an earlier run outright.
     import inspect
 
     from trl import SFTConfig, SFTTrainer
 
-    sft_fields = set(inspect.signature(SFTConfig.__init__).parameters)
-    length_kwargs = {}
-    if "max_length" in sft_fields:
-        length_kwargs["max_length"] = cfg.model.max_seq_length
-    elif "max_seq_length" in sft_fields:
-        length_kwargs["max_seq_length"] = cfg.model.max_seq_length
-    if "dataset_text_field" in sft_fields:
-        length_kwargs["dataset_text_field"] = "text"
-    if "packing" in sft_fields:
+    # Build SFTConfig directly and keep only the arguments this version accepts.
+    # Constructing TrainingArguments first and converting was fragile: it died
+    # on `save_safetensors`, which transformers 5 removed. Filtering by
+    # signature means a removed argument is reported and skipped rather than
+    # crashing a run several minutes in.
+    desired = {
+        "output_dir": tcfg.output_dir,
+        "per_device_train_batch_size": tcfg.per_device_train_batch_size,
+        "gradient_accumulation_steps": tcfg.gradient_accumulation_steps,
+        "num_train_epochs": tcfg.num_train_epochs,
+        "max_steps": tcfg.max_steps or -1,
+        "learning_rate": tcfg.learning_rate,
+        "warmup_ratio": tcfg.warmup_ratio,
+        "lr_scheduler_type": tcfg.lr_scheduler_type,
+        "weight_decay": tcfg.weight_decay,
+        "optim": tcfg.optim,
+        "max_grad_norm": tcfg.max_grad_norm,
+        "logging_steps": tcfg.logging_steps,
+        "save_steps": tcfg.save_steps,
+        "save_total_limit": tcfg.save_total_limit,
+        "seed": tcfg.seed,
+        # Turing and Pascal have no bf16 units; picking the wrong one here is an
+        # instant crash on a free-tier GPU.
+        "fp16": not torch.cuda.is_bf16_supported(),
+        "bf16": torch.cuda.is_bf16_supported(),
+        "report_to": "none",
+        "dataset_text_field": "text",
         # Packing would blend two problems into one window.
-        length_kwargs["packing"] = False
+        "packing": False,
+    }
+    if "max_length" in inspect.signature(SFTConfig.__init__).parameters:
+        desired["max_length"] = cfg.model.max_seq_length
+    else:
+        desired["max_seq_length"] = cfg.model.max_seq_length
 
-    sft_args = SFTConfig(**{**vars(args), **length_kwargs}) if sft_fields else args
+    sft_fields = set(inspect.signature(SFTConfig.__init__).parameters)
+    accepted = {k: v for k, v in desired.items() if k in sft_fields}
+    skipped = sorted(set(desired) - set(accepted))
+    if skipped:
+        print(f"SFTConfig does not accept, skipping: {skipped}", file=sys.stderr)
+
+    sft_args = SFTConfig(**accepted)
+
 
     trainer_fields = set(inspect.signature(SFTTrainer.__init__).parameters)
     trainer_kwargs = {
