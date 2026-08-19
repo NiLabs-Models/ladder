@@ -145,10 +145,14 @@ run_stage("preflight", preflight)
 # Keep library caches out of /kaggle/working: everything there becomes kernel
 # output, and HF tokenizer + unsloth compile caches are tens of MB that make
 # fetching a small status.json slow. Results only.
-os.environ.setdefault("HF_HOME", "/tmp/hf")
-os.environ.setdefault("HF_HUB_CACHE", "/tmp/hf/hub")
-os.environ.setdefault("TRANSFORMERS_CACHE", "/tmp/hf/transformers")
-os.environ.setdefault("UNSLOTH_CACHE_DIR", "/tmp/unsloth")
+# Assigned, not setdefault: Kaggle sets these itself, pointing into
+# /kaggle/working, so setdefault was a no-op and the training run still shipped
+# 800MB of tokenizer cache as "output".
+os.environ["HF_HOME"] = "/tmp/hf"
+os.environ["HF_HUB_CACHE"] = "/tmp/hf/hub"
+os.environ["TRANSFORMERS_CACHE"] = "/tmp/hf/transformers"
+os.environ["HF_DATASETS_CACHE"] = "/tmp/hf/datasets"
+os.environ["UNSLOTH_CACHE_DIR"] = "/tmp/unsloth"
 
 
 def setup():
