@@ -79,7 +79,10 @@ def staging_dir(user: str) -> Path:
         "enable_internet": True,
         "dataset_sources": [],
         "competition_sources": [],
-        "kernel_sources": [],
+        # The prepared SFT data, built by the CPU kernel. Attaching it is what
+        # keeps data prep out of the GPU session; without it the training kernel
+        # refuses to run rather than quietly rebuilding the dataset here.
+        "kernel_sources": [f"{user}/ladder-build-data"],
     }
     (out / "kernel-metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     return out
