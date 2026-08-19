@@ -1,29 +1,37 @@
-# Sized to finish inside ONE Kaggle kernel session (12h hard cap), including
-# both evals. Budget: setup ~10m, data ~30m, base eval ~1.2h, train ~3.5h,
-# tuned eval ~1.5h => ~7h with real margin.
+# Sized for ONE Kaggle GPU session (12h cap), with data prep done elsewhere.
 #
-# The margin is deliberate and this run is deliberately short. T4 training
-# throughput for a 3B in 4-bit is the big unknown (800-1200 tok/s changes the
-# total by hours), and a kernel killed at the cap loses the tuned eval -- the
-# only number anyone actually wants. Run one buys a measured throughput figure;
-# size run two off that.
+# The length bound is the load-bearing number here. These are R1-style reasoning
+# traces and they are long: median ~13,770 estimated tokens over the whole
+# corpus, p90 ~23,400. Measured yield by bound:
 #
-# For a longer run once this one has landed, use configs/ladder-3b-t4.yaml.
-name: ladder-3b-kaggle
+#     max_tokens   5120 ->  1348 rows (17%)
+#                  8192 ->  2412 rows (30%)
+#                 16384 ->  4753 rows (58%)
+#                 24576 ->  7635 rows (94%)
+#
+# 8192 is the most data that fits a 3B in 4-bit on a 16GB T4/P100 with room for
+# activations. Keeping more would mean a context this hardware cannot hold, and
+# traces past the bound are dropped rather than truncated -- a truncated trace
+# teaches the model to stop mid-thought.
+#
+# An earlier version of this file used 5120, picked from a 25-row sample taken
+# at offset 0. Those are easy early problems with a median near 2,700 tokens,
+# and nothing about them generalizes to the corpus.
 
 data:
   dataset: open-r1/codeforces-cots
   config_name: solutions_py_decontaminated
   split: train
-  max_tokens: 5120
+  max_tokens: 8192
   min_tokens: 256
   require_finish_reason: stop
   dedup_by_problem: true
   val_fraction: 0.04
   seed: 17
-  # Cap the corpus so data prep is bounded. ~4.5k verified traces is enough to
-  # move a 3B model on format and approach, which is what one epoch can do.
-  max_samples: 4500
+  # 0 = use everything that survives the filters. A cap is pointless: the whole
+  # corpus yields about 2.4k rows at this length bound, well under any cap worth
+  # setting.
+  max_samples: 0
   verify_solutions: true
   verify_max_tests: 4
   verify_timeout: 5.0
@@ -31,7 +39,7 @@ data:
 
 model:
   base_model: unsloth/Qwen2.5-Coder-3B-Instruct-bnb-4bit
-  max_seq_length: 6144
+  max_seq_length: 8192
   load_in_4bit: true
   lora_r: 32
   lora_alpha: 32
@@ -42,7 +50,7 @@ train:
   per_device_train_batch_size: 1
   gradient_accumulation_steps: 16
   num_train_epochs: 1.0
-  max_steps: 250          # 250 * 16 effective batch = 4000 sequences
+  max_steps: 150          # 150 * 16 = 2400 sequences, about one epoch
   learning_rate: 1.0e-4
   warmup_ratio: 0.03
   lr_scheduler_type: cosine
@@ -53,9 +61,12 @@ train:
   save_total_limit: 2
 
 eval:
-  num_problems: 60
+  num_problems: 40
   samples_per_problem: 1
-  max_new_tokens: 3072
+  # The tuned model is trained on long reasoning, so it generates long. Too low
+  # a ceiling truncates it mid-thought and scores the fine-tune as producing no
+  # code -- which would understate it against the base model, not overstate it.
+  max_new_tokens: 4096
   temperature: 0.0        # greedy: this is a capability measurement
   timeout_seconds: 8.0
   max_tests_per_problem: 12

@@ -151,7 +151,9 @@ def train(cfg: RunConfig, data_dir: str | Path) -> str:
             peak_vram_bytes = torch.cuda.max_memory_allocated()
             extra["gpu"] = torch.cuda.get_device_name(0)
 
-        throughput = summarize(runtime, total_tokens, n_examples, peak_vram_bytes=peak_vram_bytes, **extra)
+        throughput = summarize(
+            runtime, total_tokens, n_examples, peak_vram_bytes=peak_vram_bytes, **extra
+        )
         (out_dir / "throughput.json").write_text(
             json.dumps(throughput, indent=2), encoding="utf-8"
         )

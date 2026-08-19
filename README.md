@@ -176,6 +176,24 @@ signal *is* the reasoning.
 discarded. Truncating it would teach the model to stop mid-thought, which is a
 worse failure than never seeing the example.
 
+**Why the length bound costs so much data.** These are R1-style reasoning traces
+and they are long — median ~13,770 estimated tokens across the corpus, p90
+~23,400. Measured yield:
+
+| `max_tokens` | rows kept |
+| --- | --- |
+| 5,120 | 1,348 (17%) |
+| 8,192 | 2,412 (30%) |
+| 16,384 | 4,753 (58%) |
+| 24,576 | 7,635 (94%) |
+
+8192 is roughly the most a 3B in 4-bit can hold on a 16GB T4 or P100 with room
+for activations, so most of the corpus is out of reach on free-tier hardware.
+That is a real limitation of this project, not a tuning choice. Sample the
+distribution before changing the bound — an earlier config used 5,120 based on
+25 rows read from offset 0, which are easy early problems with a median near
+2,700 and representative of nothing.
+
 **Why the split is a hash.** `split_key(problem_id, seed)` is stable across runs,
 machines, and upstream dataset refreshes. Shuffling with a seed is not: add rows
 upstream and a held-out problem can quietly migrate into training.
