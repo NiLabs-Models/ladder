@@ -63,3 +63,61 @@ def test_verify_pairs_filters_a_stream_and_records_why():
 
 def test_verify_pairs_on_an_empty_stream():
     assert list(verify_pairs([], CFG, FilterStats())) == []
+
+
+def test_threaded_verification_does_not_stall():
+    """Verification under threads must not deadlock or serialize pathologically.
+
+    This is the regression that cost a 12-hour Kaggle GPU session. The judge
+    applied rlimits through `preexec_fn`, which runs between fork and exec and
+    is documented as unsafe in the presence of threads -- and this code path
+    calls it from a ThreadPoolExecutor. On Linux it turned 0.2s/trace into
+    93s/trace; locally it was invisible because the preexec_fn was only
+    installed on POSIX, so Windows never ran it.
+
+    The assertion is a wall-clock budget, deliberately loose enough not to flake
+    on a loaded CI box but far tighter than a stall.
+    """
+    import time
+
+    n = 24
+    pairs = [pair(CORRECT) for _ in range(n)]
+    cfg = DataConfig(
+        verify_solutions=True,
+        verify_max_tests=2,
+        verify_timeout=5.0,
+        verify_workers=8,
+        dedup_by_problem=False,
+    )
+
+    started = time.monotonic()
+    kept = list(verify_pairs(pairs, cfg, FilterStats()))
+    elapsed = time.monotonic() - started
+
+    assert len(kept) == n
+    assert elapsed < n * 2.0, (
+        f"threaded verification took {elapsed:.1f}s for {n} traces "
+        f"({elapsed / n:.1f}s each) -- expected well under 2s each. "
+        "A fork-time callback deadlocking against the thread pool looks exactly "
+        "like this."
+    )
+
+
+def test_a_runaway_program_is_killed_and_does_not_hang_the_pool():
+    """A timing-out solution must cost its timeout, not block the pool."""
+    import time
+
+    spin = "```python\nwhile True:\n    pass\n```"
+    cfg = DataConfig(
+        verify_solutions=True, verify_max_tests=1, verify_timeout=2.0,
+        verify_workers=4, dedup_by_problem=False,
+    )
+    pairs = [pair(spin) for _ in range(4)]
+
+    started = time.monotonic()
+    kept = list(verify_pairs(pairs, cfg, FilterStats()))
+    elapsed = time.monotonic() - started
+
+    assert kept == []
+    # Four 2s timeouts across four workers should overlap, not queue up.
+    assert elapsed < 12.0, f"took {elapsed:.1f}s; timeouts are not running concurrently"

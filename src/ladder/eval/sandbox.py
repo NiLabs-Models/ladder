@@ -10,6 +10,7 @@ Colab already give you a disposable VM, which is why this is tolerable there.
 from __future__ import annotations
 
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -80,23 +81,39 @@ def outputs_match(expected: str, actual: str, case_sensitive: bool = False) -> b
     return True
 
 
-def _preexec(memory_limit_mb: int):
-    """Apply rlimits in the child. POSIX only; returns None on Windows."""
-    if os.name != "posix":
-        return None
+# Rlimits are applied by a bootstrap *inside* the child rather than by
+# preexec_fn. preexec_fn runs between fork and exec and is documented as unsafe
+# in the presence of threads -- and verification calls this from a
+# ThreadPoolExecutor. On Kaggle that combination turned a 0.2s/trace job into
+# 93s/trace and burned a 12-hour GPU session in data prep. It was invisible
+# locally because _preexec returned None on Windows, so the path never ran.
+#
+# RLIMIT_NPROC is deliberately gone: it is a per-*user* limit on Linux, so in a
+# shared container where the user already has many processes, setting it to 64
+# breaks every subsequent fork. Runaway process spawning is handled instead by
+# start_new_session plus killing the whole process group on timeout.
+_BOOTSTRAP = """import resource, runpy, sys
+_limit = {mem_bytes}
+resource.setrlimit(resource.RLIMIT_AS, (_limit, _limit))
+_fsize = {fsize_bytes}
+resource.setrlimit(resource.RLIMIT_FSIZE, (_fsize, _fsize))
+sys.argv = ["solution.py"]
+runpy.run_path("solution.py", run_name="__main__")
+"""
 
-    import resource
 
-    def apply() -> None:
-        limit = memory_limit_mb * 1024 * 1024
-        resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
-        # No forking: a fork bomb from generated code would outlive the timeout.
-        resource.setrlimit(resource.RLIMIT_NPROC, (64, 64))
-        # Cap file writes so a runaway print-to-file cannot fill the disk.
-        resource.setrlimit(resource.RLIMIT_FSIZE, (64 * 1024 * 1024, 64 * 1024 * 1024))
-        os.setsid()
-
-    return apply
+def _kill_process_group(proc) -> None:
+    """Kill the child and anything it spawned."""
+    try:
+        if os.name == "posix":
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        else:
+            proc.kill()
+    except (ProcessLookupError, PermissionError, OSError):
+        try:
+            proc.kill()
+        except OSError:
+            pass
 
 
 def run_program(
@@ -112,44 +129,67 @@ def run_program(
         return RunResult(Verdict.NO_CODE)
 
     with tempfile.TemporaryDirectory(prefix="ladder-eval-") as tmpdir:
-        script = Path(tmpdir) / "solution.py"
-        script.write_text(code, encoding="utf-8")
+        tmp = Path(tmpdir)
+        (tmp / "solution.py").write_text(code, encoding="utf-8")
 
         # -I (isolated): the program cannot import from the eval harness's own
         # directory or inherit PYTHONPATH from the parent.
         #
         # Deliberately NOT -S. Disabling site.py also removes the `exit`/`quit`
-        # builtins, and competitive-programming solutions call exit() to bail out
-        # early constantly -- it turned correct programs into runtime errors.
-        cmd = [sys.executable, "-I", str(script)]
+        # builtins, and competitive-programming solutions call exit() to bail
+        # out early constantly -- it turned correct programs into runtime errors.
+        if os.name == "posix":
+            (tmp / "_bootstrap.py").write_text(
+                _BOOTSTRAP.format(
+                    mem_bytes=memory_limit_mb * 1024 * 1024,
+                    fsize_bytes=64 * 1024 * 1024,
+                ),
+                encoding="utf-8",
+            )
+            target = "_bootstrap.py"
+        else:
+            target = "solution.py"
+
+        cmd = [sys.executable, "-I", target]
         env = {"PATH": os.environ.get("PATH", ""), "PYTHONIOENCODING": "utf-8"}
 
         started = time.monotonic()
         try:
-            proc = subprocess.run(
+            proc = subprocess.Popen(
                 cmd,
-                input=stdin,
-                capture_output=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=timeout_seconds,
                 cwd=tmpdir,
                 env=env,
-                preexec_fn=_preexec(memory_limit_mb),
+                # Own session, so a runaway program's children die with it.
+                # Thread-safe, unlike the preexec_fn this replaced.
+                start_new_session=(os.name == "posix"),
             )
-        except subprocess.TimeoutExpired:
-            return RunResult(Verdict.TIMEOUT, duration=timeout_seconds)
         except OSError as exc:
             return RunResult(Verdict.RUNTIME_ERROR, stderr=str(exc))
+
+        try:
+            out, err = proc.communicate(stdin, timeout=timeout_seconds)
+        except subprocess.TimeoutExpired:
+            _kill_process_group(proc)
+            try:
+                proc.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+            return RunResult(Verdict.TIMEOUT, duration=timeout_seconds)
         duration = time.monotonic() - started
 
     if proc.returncode != 0:
         return RunResult(
             Verdict.RUNTIME_ERROR,
-            stdout=proc.stdout,
-            stderr=proc.stderr[-4000:],
+            stdout=out,
+            stderr=err[-4000:],
             duration=duration,
         )
-    return RunResult(Verdict.ACCEPTED, stdout=proc.stdout, stderr=proc.stderr, duration=duration)
+    return RunResult(Verdict.ACCEPTED, stdout=out, stderr=err, duration=duration)
+
 
 
 def judge(
