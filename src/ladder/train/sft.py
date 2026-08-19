@@ -124,7 +124,8 @@ def train(cfg: RunConfig, data_dir: str | Path) -> str:
             tokenizer=tokenizer,
         )
 
-    torch.cuda.reset_peak_memory_stats()
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
     stats = trainer.train()
 
     out_dir = Path(tcfg.output_dir)
