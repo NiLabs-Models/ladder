@@ -1,9 +1,9 @@
-"""Kaggle kernel entry point: data -> base eval -> train -> tuned eval.
+"""Kaggle kernel entry point: preflight -> data -> base eval -> train -> tuned eval.
 
 Runs unattended in one kernel session, so it is written to survive being killed:
-every stage writes its result to /kaggle/working the moment it finishes, and the
-adapter is checkpointed along the way. A session that dies during the tuned eval
-still leaves the base number and the trained adapter behind.
+every stage writes its result to /kaggle/working/status.json the moment it
+finishes, and the adapter is checkpointed as it trains. A session that dies
+during the tuned eval still leaves the base number and the adapter behind.
 
 Stage order is deliberate. The base eval runs BEFORE training because a tuned
 number with nothing to compare it to is not a result, and the base eval is the
@@ -35,29 +35,34 @@ def save_status(**kw):
     print(f"[status] {json.dumps(STATUS['stages'])}", flush=True)
 
 
-def stage(name):
-    """Run a stage, recording its outcome without letting a failure kill the rest."""
-    def wrap(fn):
-        started = time.time()
-        print(f"\n{'=' * 70}\n[{name}] starting\n{'=' * 70}", flush=True)
-        try:
-            result = fn()
-            STATUS["stages"][name] = {
-                "ok": True,
-                "minutes": round((time.time() - started) / 60, 1),
-            }
-            save_status()
-            return result
-        except Exception as exc:
-            STATUS["stages"][name] = {
-                "ok": False,
-                "error": f"{type(exc).__name__}: {exc}",
-                "minutes": round((time.time() - started) / 60, 1),
-            }
-            save_status()
-            traceback.print_exc()
-            return None
-    return wrap
+def run_stage(name, fn, required=True):
+    """Run one stage, recording its outcome.
+
+    A plain function, not a decorator: the decorator version rebound each stage
+    name to its return value, so the following call tried to invoke the result.
+
+    `required` stages abort the run. Continuing past a failed setup just burns a
+    session slot failing every later stage for the same reason.
+    """
+    started = time.time()
+    print(f"\n{'=' * 70}\n[{name}] starting\n{'=' * 70}", flush=True)
+    try:
+        result = fn()
+        STATUS["stages"][name] = {"ok": True, "minutes": round((time.time() - started) / 60, 1)}
+        save_status()
+        return result
+    except Exception as exc:
+        STATUS["stages"][name] = {
+            "ok": False,
+            "error": f"{type(exc).__name__}: {exc}",
+            "minutes": round((time.time() - started) / 60, 1),
+        }
+        save_status()
+        traceback.print_exc()
+        if required:
+            print(f"\n[{name}] is required -- aborting instead of burning the session.", flush=True)
+            sys.exit(1)
+        return None
 
 
 def sh(cmd):
@@ -66,20 +71,60 @@ def sh(cmd):
 
 
 # --------------------------------------------------------------------------
-# 0. environment
+# 0. preflight -- fail in seconds, not after a 4-minute pip timeout
 # --------------------------------------------------------------------------
-@stage("setup")
-def _setup():
+def preflight():
+    """Check the two entitlements this run cannot proceed without.
+
+    Kaggle silently downgrades `enable_internet` and `enable_gpu` when the
+    account is not verified for them, so the kernel starts and then dies four
+    minutes later inside pip with a DNS error. Check both up front and say
+    plainly which one is missing.
+    """
+    import socket
+
+    try:
+        socket.setdefaulttimeout(10)
+        socket.getaddrinfo("pypi.org", 443)
+        net = True
+    except OSError as exc:
+        net = False
+        print(f"no internet: {exc}", flush=True)
+
+    gpu = subprocess.run(
+        "nvidia-smi --query-gpu=name,memory.total --format=csv,noheader",
+        shell=True, capture_output=True, text=True,
+    )
+    gpu_name = gpu.stdout.strip() if gpu.returncode == 0 else ""
+    print(f"internet: {net} | gpu: {gpu_name or 'NONE'}", flush=True)
+    save_status(internet=net, gpu=gpu_name)
+
+    if not net:
+        raise RuntimeError(
+            "kernel has no internet. Enable it in the notebook settings; it "
+            "requires a phone-verified Kaggle account, and Kaggle downgrades the "
+            "flag silently when the account is not verified."
+        )
+    if not gpu_name:
+        raise RuntimeError("kernel has no GPU. Set the accelerator to GPU T4 x2.")
+    return gpu_name
+
+
+run_stage("preflight", preflight)
+
+
+# --------------------------------------------------------------------------
+# 1. environment
+# --------------------------------------------------------------------------
+def setup():
     sh("pip install -q -U 'unsloth==2025.9.1' 'unsloth_zoo==2025.9.1'")
     sh("pip install -q 'trl>=0.9.6,<0.12' 'peft>=0.12.0' 'bitsandbytes>=0.43.0'")
     if not os.path.isdir(REPO_DIR):
         sh(f"git clone -q {REPO} {REPO_DIR}")
-    sys.path.insert(0, f"{REPO_DIR}/src")
-    sh("nvidia-smi --query-gpu=name,memory.total --format=csv")
     return True
 
 
-_setup()
+run_stage("setup", setup)
 sys.path.insert(0, f"{REPO_DIR}/src")
 
 from ladder.config import load_config  # noqa: E402
@@ -90,21 +135,20 @@ save_status(config=cfg.to_dict())
 
 
 # --------------------------------------------------------------------------
-# 1. data
+# 2. data
 # --------------------------------------------------------------------------
-@stage("build_data")
-def _build():
+def build_data():
     from ladder.data.build import build
 
     return build(cfg, DATA_DIR)
 
 
-counts = _build()
+counts = run_stage("build_data", build_data)
 save_status(data_counts=counts)
 
 
 # --------------------------------------------------------------------------
-# 2/4. evals -- same problems, same prompt, only the adapter differs
+# 3/5. evals -- same problems, same prompt, only the adapter differs
 # --------------------------------------------------------------------------
 def run_eval(adapter, label):
     import gc
@@ -117,51 +161,38 @@ def run_eval(adapter, label):
     cfg.eval.results_path = f"{WORK}/outputs/eval-{label}.json"
     model, tok = load_for_inference(cfg, adapter)
     try:
-        summary = evaluate(make_generator(model, tok, cfg), cfg)
+        return evaluate(make_generator(model, tok, cfg), cfg)
     finally:
         del model
         gc.collect()
         torch.cuda.empty_cache()
-    return summary
 
 
-@stage("eval_base")
-def _eval_base():
-    return run_eval(None, "base")
-
-
-base = _eval_base()
+# Not required: if the base eval dies we still want the trained adapter out of
+# this session, and the base number can be recomputed on CPU-cheap hardware later.
+base = run_stage("eval_base", lambda: run_eval(None, "base"), required=False)
 if base:
     save_status(base_metrics=base["metrics"], base_verdicts=base["verdicts"])
 
 
 # --------------------------------------------------------------------------
-# 3. train
+# 4. train
 # --------------------------------------------------------------------------
-@stage("train")
-def _train():
+def train_model():
     from ladder.train.sft import train
 
     return train(cfg, DATA_DIR)
 
 
-adapter_dir = _train()
+adapter_dir = run_stage("train", train_model)
 
-
-@stage("eval_tuned")
-def _eval_tuned():
-    if not adapter_dir:
-        raise RuntimeError("training did not produce an adapter")
-    return run_eval(adapter_dir, "tuned")
-
-
-tuned = _eval_tuned()
+tuned = run_stage("eval_tuned", lambda: run_eval(adapter_dir, "tuned"), required=False)
 if tuned:
     save_status(tuned_metrics=tuned["metrics"], tuned_verdicts=tuned["verdicts"])
 
 
 # --------------------------------------------------------------------------
-# 5. the answer
+# 6. the answer
 # --------------------------------------------------------------------------
 print("\n" + "=" * 70)
 print("LADDER RESULTS")
