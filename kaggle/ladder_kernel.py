@@ -21,8 +21,13 @@ REPO = "https://github.com/NiLabs-Models/ladder.git"
 REPO_DIR = "/kaggle/working/ladder"
 WORK = "/kaggle/working"
 CONFIG = f"{REPO_DIR}/configs/ladder-3b-kaggle.yaml"
-DATA_DIR = f"{WORK}/data/sft"
 STATUS_PATH = f"{WORK}/status.json"
+
+# Data comes from the CPU kernel declared in kernel_sources, already built and
+# verified. Building it here is what cost the first run its entire session: all
+# twelve hours went to CPU work with the GPU idle, and it still did not finish.
+PREPARED_DATA = "/kaggle/input/ladder-build-data/data/sft"
+DATA_DIR = PREPARED_DATA if os.path.isdir(PREPARED_DATA) else f"{WORK}/data/sft"
 
 STATUS = {"stages": {}, "started": time.time()}
 
@@ -135,15 +140,35 @@ save_status(config=cfg.to_dict())
 
 
 # --------------------------------------------------------------------------
-# 2. data
+# 2. data -- attached, not built
 # --------------------------------------------------------------------------
-def build_data():
-    from ladder.data.build import build
+def use_prepared_data():
+    """Use the prepared dataset, and refuse to build it here if it is missing.
 
-    return build(cfg, DATA_DIR)
+    Building costs hours of CPU work, and this session's clock is GPU time.
+    Failing loudly with instructions is strictly better than silently spending
+    the whole session on data prep -- which is exactly what happened the first
+    time.
+    """
+    train_file = os.path.join(DATA_DIR, "train.jsonl")
+    if not os.path.exists(train_file):
+        raise RuntimeError(
+            f"no prepared data at {DATA_DIR}. Run the CPU kernel "
+            "natedemoss/ladder-build-data first and add it to this kernel's "
+            "kernel_sources. Data prep does not belong in a GPU session."
+        )
+    with open(train_file, encoding="utf-8") as fh:
+        n_train = sum(1 for _ in fh)
+    val_file = os.path.join(DATA_DIR, "val.jsonl")
+    n_val = 0
+    if os.path.exists(val_file):
+        with open(val_file, encoding="utf-8") as fh:
+            n_val = sum(1 for _ in fh)
+    print(f"using prepared data: {n_train} train / {n_val} val from {DATA_DIR}", flush=True)
+    return {"train": n_train, "val": n_val}
 
 
-counts = run_stage("build_data", build_data)
+counts = run_stage("attach_data", use_prepared_data)
 save_status(data_counts=counts)
 
 
