@@ -1,7 +1,12 @@
 # Sized to finish inside ONE Kaggle kernel session (12h hard cap), including
-# both evals. Budget roughly: data ~20m, base eval ~1.3h, train ~4h,
-# tuned eval ~1.3h. The margin is deliberate -- a kernel killed at the cap
-# loses the tuned eval, which is the only number anyone cares about.
+# both evals. Budget: setup ~10m, data ~30m, base eval ~1.2h, train ~3.5h,
+# tuned eval ~1.5h => ~7h with real margin.
+#
+# The margin is deliberate and this run is deliberately short. T4 training
+# throughput for a 3B in 4-bit is the big unknown (800-1200 tok/s changes the
+# total by hours), and a kernel killed at the cap loses the tuned eval -- the
+# only number anyone actually wants. Run one buys a measured throughput figure;
+# size run two off that.
 #
 # For a longer run once this one has landed, use configs/ladder-3b-t4.yaml.
 name: ladder-3b-kaggle
@@ -16,9 +21,9 @@ data:
   dedup_by_problem: true
   val_fraction: 0.04
   seed: 17
-  # Cap the corpus so data prep is bounded. ~6k verified traces is plenty to
+  # Cap the corpus so data prep is bounded. ~4.5k verified traces is enough to
   # move a 3B model on format and approach, which is what one epoch can do.
-  max_samples: 6000
+  max_samples: 4500
   verify_solutions: true
   verify_max_tests: 4
   verify_timeout: 5.0
@@ -37,7 +42,7 @@ train:
   per_device_train_batch_size: 1
   gradient_accumulation_steps: 16
   num_train_epochs: 1.0
-  max_steps: 375          # ~6000 samples / 16 effective batch
+  max_steps: 250          # 250 * 16 effective batch = 4000 sequences
   learning_rate: 1.0e-4
   warmup_ratio: 0.03
   lr_scheduler_type: cosine
