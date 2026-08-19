@@ -141,16 +141,17 @@ def train(cfg: RunConfig, data_dir: str | Path) -> str:
         total_tokens, n_examples = count_trained_tokens(
             train_file, tcfg.max_steps, effective_batch
         )
-        throughput = summarize(
-            runtime,
-            total_tokens,
-            n_examples,
-            peak_vram_bytes=torch.cuda.max_memory_allocated(),
-            gpu=torch.cuda.get_device_name(0),
-            max_seq_length=cfg.model.max_seq_length,
-            effective_batch=effective_batch,
-            max_steps=tcfg.max_steps,
-        )
+        extra = {
+            "max_seq_length": cfg.model.max_seq_length,
+            "effective_batch": effective_batch,
+            "max_steps": tcfg.max_steps,
+        }
+        peak_vram_bytes = None
+        if torch.cuda.is_available():
+            peak_vram_bytes = torch.cuda.max_memory_allocated()
+            extra["gpu"] = torch.cuda.get_device_name(0)
+
+        throughput = summarize(runtime, total_tokens, n_examples, peak_vram_bytes=peak_vram_bytes, **extra)
         (out_dir / "throughput.json").write_text(
             json.dumps(throughput, indent=2), encoding="utf-8"
         )
