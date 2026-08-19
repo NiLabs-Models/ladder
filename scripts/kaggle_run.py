@@ -35,14 +35,22 @@ def kaggle(*args: str, check: bool = True) -> subprocess.CompletedProcess:
 
 
 def require_credentials() -> None:
+    """Accept any of the three shapes Kaggle credentials come in.
+
+    Newer tokens are a single `KGAT_...` string in ~/.kaggle/access_token; older
+    ones are a {username, key} pair in ~/.kaggle/kaggle.json. Checking only for
+    kaggle.json rejects a perfectly good modern token.
+    """
     if os.environ.get("KAGGLE_USERNAME") and os.environ.get("KAGGLE_KEY"):
         return
-    if (Path.home() / ".kaggle" / "kaggle.json").exists():
+    kaggle_dir = Path.home() / ".kaggle"
+    if (kaggle_dir / "kaggle.json").exists() or (kaggle_dir / "access_token").exists():
         return
     sys.exit(
         "No Kaggle credentials found.\n"
-        "  1. https://www.kaggle.com/settings -> API -> Create New Token\n"
-        "  2. save the downloaded kaggle.json to ~/.kaggle/kaggle.json\n"
+        "  https://www.kaggle.com/settings -> API -> Create New Token\n"
+        "  Save kaggle.json to ~/.kaggle/kaggle.json, or an access token\n"
+        "  to ~/.kaggle/access_token.\n"
         "GPU also requires a phone-verified Kaggle account."
     )
 
@@ -62,7 +70,10 @@ def staging_dir(user: str) -> Path:
         "code_file": "ladder_kernel.py",
         "language": "python",
         "kernel_type": "script",
-        "is_private": False,
+        # Private. Kaggle rejects a public kernel (403 on SaveKernel) unless the
+        # account is verified for it, and nothing here needs to be public -- the
+        # code already lives in a public repo; this is just the runner.
+        "is_private": True,
         "enable_gpu": True,
         # The kernel pip-installs unsloth and clones the repo.
         "enable_internet": True,
