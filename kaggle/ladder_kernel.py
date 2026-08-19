@@ -29,8 +29,19 @@ STATUS_PATH = f"{WORK}/status.json"
 # Data comes from the CPU kernel declared in kernel_sources, already built and
 # verified. Building it here is what cost the first run its entire session: all
 # twelve hours went to CPU work with the GPU idle, and it still did not finish.
-PREPARED_DATA = "/kaggle/input/ladder-build-data/data/sft"
-DATA_DIR = PREPARED_DATA if os.path.isdir(PREPARED_DATA) else f"{WORK}/data/sft"
+#
+# The mount path is searched rather than assumed. Guessing it as
+# /kaggle/input/<slug>/data/sft was wrong and cost a run, and the exact layout
+# is Kaggle's to decide, not ours.
+def find_prepared_data():
+    """Locate train.jsonl under /kaggle/input, wherever Kaggle mounted it."""
+    import glob
+
+    hits = sorted(glob.glob("/kaggle/input/**/train.jsonl", recursive=True))
+    return os.path.dirname(hits[0]) if hits else f"{WORK}/data/sft"
+
+
+DATA_DIR = find_prepared_data()
 
 STATUS = {"stages": {}, "started": time.time()}
 
@@ -175,10 +186,23 @@ def use_prepared_data():
     """
     train_file = os.path.join(DATA_DIR, "train.jsonl")
     if not os.path.exists(train_file):
+        # Show what IS mounted. A failure here is nearly always a kernel_sources
+        # wiring problem, and the listing says immediately which.
+        mounted = []
+        for root, dirs, files in os.walk("/kaggle/input"):
+            depth = root.count("/") - 2
+            if depth <= 2:
+                mounted.append(f"  {root}: {sorted(files)[:6]}")
+            if depth > 2:
+                dirs[:] = []
+        listing = '\n'.join(mounted) or "  (nothing mounted under /kaggle/input)"
         raise RuntimeError(
-            f"no prepared data at {DATA_DIR}. Run the CPU kernel "
-            "natedemoss/ladder-build-data first and add it to this kernel's "
-            "kernel_sources. Data prep does not belong in a GPU session."
+            "no prepared data found. Looked for train.jsonl under "
+            f"/kaggle/input and fell back to {DATA_DIR}.\n"
+            f"Mounted:\n{listing}\n"
+            "Run the CPU kernel natedemoss/ladder-build-data and add it to "
+            "this kernel's kernel_sources. Data prep does not belong in a "
+            "GPU session."
         )
     with open(train_file, encoding="utf-8") as fh:
         n_train = sum(1 for _ in fh)
