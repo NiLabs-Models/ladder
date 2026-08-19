@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 from ladder.config import RunConfig
+from ladder.train.metrics import count_trained_tokens, summarize
 
 
 def load_model(cfg: RunConfig):
@@ -123,6 +124,8 @@ def train(cfg: RunConfig, data_dir: str | Path) -> str:
             tokenizer=tokenizer,
         )
 
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
     stats = trainer.train()
 
     out_dir = Path(tcfg.output_dir)
@@ -131,7 +134,34 @@ def train(cfg: RunConfig, data_dir: str | Path) -> str:
     tokenizer.save_pretrained(str(out_dir))
     (out_dir / "run_config.json").write_text(json.dumps(cfg.to_dict(), indent=2), encoding="utf-8")
 
-    print(f"train_runtime={stats.metrics.get('train_runtime')}s", file=sys.stderr)
+    # Throughput, so the next run can be sized by arithmetic instead of a guess.
+    runtime = stats.metrics.get("train_runtime")
+    if runtime is not None:
+        effective_batch = tcfg.per_device_train_batch_size * tcfg.gradient_accumulation_steps
+        total_tokens, n_examples = count_trained_tokens(
+            train_file, tcfg.max_steps, effective_batch
+        )
+        extra = {
+            "max_seq_length": cfg.model.max_seq_length,
+            "effective_batch": effective_batch,
+            "max_steps": tcfg.max_steps,
+        }
+        peak_vram_bytes = None
+        if torch.cuda.is_available():
+            peak_vram_bytes = torch.cuda.max_memory_allocated()
+            extra["gpu"] = torch.cuda.get_device_name(0)
+
+        throughput = summarize(runtime, total_tokens, n_examples, peak_vram_bytes=peak_vram_bytes, **extra)
+        (out_dir / "throughput.json").write_text(
+            json.dumps(throughput, indent=2), encoding="utf-8"
+        )
+        print(
+            f"throughput: {throughput['tokens_per_second']} tok/s"
+            f" | peak vram {throughput.get('peak_vram_gb')} GB"
+            f" | {throughput['train_runtime_hours']} h",
+            file=sys.stderr,
+        )
+
     print(f"saved adapter -> {out_dir}", file=sys.stderr)
 
     if tcfg.push_to_hub and tcfg.hub_model_id:

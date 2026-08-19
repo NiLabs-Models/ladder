@@ -53,6 +53,16 @@ body:
       required: true
 
   - type: textarea
+    id: throughput
+    attributes:
+      label: throughput.json
+      description: >-
+        Written next to the adapter by the training run. Tokens/sec and peak VRAM
+        on real hardware are what make the next run sizeable by arithmetic
+        instead of by guessing.
+      render: json
+
+  - type: textarea
     id: verdicts
     attributes:
       label: Verdict breakdown
