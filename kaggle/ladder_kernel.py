@@ -33,6 +33,27 @@ STATUS_PATH = f"{WORK}/status.json"
 # The mount path is searched rather than assumed. Guessing it as
 # /kaggle/input/<slug>/data/sft was wrong and cost a run, and the exact layout
 # is Kaggle's to decide, not ours.
+# Which half of the pipeline this session runs. Measured on a T4, training is
+# ~5.4h and the two evals are ~5.7h; together that is 11.2h against a 12h cap,
+# which is the same thin margin that lost the first run. Splitting them puts
+# each comfortably inside the cap and, more importantly, banks the adapter
+# before evaluation is attempted -- a slow eval can no longer take the trained
+# model down with it.
+#
+#   train  attach data, train, save the adapter
+#   eval   attach a trained adapter, score base and tuned
+#   all    everything in one session (what the smoke run uses)
+STAGE = os.environ.get("LADDER_STAGE", "all")
+
+
+def find_adapter():
+    """Locate a trained adapter mounted from the training kernel's output."""
+    import glob
+
+    hits = sorted(glob.glob("/kaggle/input/**/adapter_config.json", recursive=True))
+    return os.path.dirname(hits[0]) if hits else None
+
+
 def find_prepared_data():
     """Locate train.jsonl under /kaggle/input, wherever Kaggle mounted it."""
     import glob
@@ -135,6 +156,15 @@ run_stage("preflight", preflight)
 # --------------------------------------------------------------------------
 # 1. environment
 # --------------------------------------------------------------------------
+# Keep library caches out of /kaggle/working: everything there becomes kernel
+# output, and HF tokenizer + unsloth compile caches are tens of MB that make
+# fetching a small status.json slow. Results only.
+os.environ.setdefault("HF_HOME", "/tmp/hf")
+os.environ.setdefault("HF_HUB_CACHE", "/tmp/hf/hub")
+os.environ.setdefault("TRANSFORMERS_CACHE", "/tmp/hf/transformers")
+os.environ.setdefault("UNSLOTH_CACHE_DIR", "/tmp/unsloth")
+
+
 def setup():
     # Unpinned on purpose. Pinning unsloth==2025.9.1 broke a run outright:
     # Kaggle ships transformers 5.0.0, which that release predates badly enough
@@ -170,7 +200,9 @@ if os.environ.get("LADDER_SMOKE") == "1":
     cfg.train.output_dir = f"{WORK}/outputs/smoke"
     print("SMOKE MODE: 20 steps, 3 eval problems", flush=True)
 
-save_status(config=cfg.to_dict(), smoke=os.environ.get("LADDER_SMOKE") == "1")
+print(f"stage: {STAGE}", flush=True)
+save_status(config=cfg.to_dict(), stage=STAGE,
+            smoke=os.environ.get("LADDER_SMOKE") == "1")
 
 
 # --------------------------------------------------------------------------
@@ -215,8 +247,12 @@ def use_prepared_data():
     return {"train": n_train, "val": n_val}
 
 
-counts = run_stage("attach_data", use_prepared_data)
-save_status(data_counts=counts)
+if STAGE in ("train", "all"):
+    counts = run_stage("attach_data", use_prepared_data)
+    save_status(data_counts=counts)
+else:
+    # Evaluation reads its problems from the dataset, not from train.jsonl.
+    print("eval stage: no training data needed", flush=True)
 
 
 # --------------------------------------------------------------------------
@@ -242,7 +278,9 @@ def run_eval(adapter, label):
 
 # Not required: if the base eval dies we still want the trained adapter out of
 # this session, and the base number can be recomputed on CPU-cheap hardware later.
-base = run_stage("eval_base", lambda: run_eval(None, "base"), required=False)
+base = None
+if STAGE in ("eval", "all"):
+    base = run_stage("eval_base", lambda: run_eval(None, "base"), required=False)
 if base:
     save_status(base_metrics=base["metrics"], base_verdicts=base["verdicts"])
 
@@ -256,9 +294,22 @@ def train_model():
     return train(cfg, DATA_DIR)
 
 
-adapter_dir = run_stage("train", train_model)
+adapter_dir = None
+if STAGE in ("train", "all"):
+    adapter_dir = run_stage("train", train_model)
+else:
+    adapter_dir = find_adapter()
+    if adapter_dir is None:
+        raise SystemExit(
+            "eval stage needs a trained adapter. Run the train kernel first "
+            "and add it to this kernel's kernel_sources."
+        )
+    print(f"using adapter from {adapter_dir}", flush=True)
+    save_status(adapter_dir=adapter_dir)
 
-tuned = run_stage("eval_tuned", lambda: run_eval(adapter_dir, "tuned"), required=False)
+tuned = None
+if STAGE in ("eval", "all"):
+    tuned = run_stage("eval_tuned", lambda: run_eval(adapter_dir, "tuned"), required=False)
 if tuned:
     save_status(tuned_metrics=tuned["metrics"], tuned_verdicts=tuned["verdicts"])
 
@@ -267,8 +318,11 @@ if tuned:
 # 6. the answer
 # --------------------------------------------------------------------------
 print("\n" + "=" * 70)
-print("LADDER RESULTS")
+print(f"LADDER RESULTS (stage: {STAGE})")
 print("=" * 70)
+if STAGE == "train":
+    print(f"adapter -> {adapter_dir}")
+    print("now run the eval kernel with this one in its kernel_sources")
 if base and tuned:
     b, t = base["metrics"]["pass@1"], tuned["metrics"]["pass@1"]
     print(f"problems      : {base['n_problems']}")
