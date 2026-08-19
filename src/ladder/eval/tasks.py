@@ -87,6 +87,11 @@ def load_problems(cfg: EvalConfig, data_cfg: DataConfig) -> list[EvalProblem]:
         if cfg.problem_types and row.get("problem_type") not in cfg.problem_types:
             continue
 
+        if cfg.problem_indices:
+            index = (row.get("index") or "")[:1].upper()
+            if index not in {i.upper() for i in cfg.problem_indices}:
+                continue
+
         tests = collect_tests(row, cfg.max_tests_per_problem)
         if not tests:
             continue

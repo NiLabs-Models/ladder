@@ -219,3 +219,27 @@ def test_a_truncated_partial_file_does_not_break_resume(tmp_path):
         cfg, problems,
     )
     assert summary["n_problems"] == 1
+
+
+def test_problem_index_filter_selects_only_matching_indices():
+    """Restricting to div2 A/B is a resolution fix, so it must actually bind."""
+    from ladder.config import EvalConfig
+
+    cfg = EvalConfig(problem_indices=["A", "B"])
+    wanted = {i.upper() for i in cfg.problem_indices}
+
+    rows = [
+        {"id": "1/A", "index": "A"},
+        {"id": "2/B", "index": "B1"},   # subtask variants still count as B
+        {"id": "3/E", "index": "E"},
+        {"id": "4/J", "index": "J"},
+        {"id": "5/a", "index": "a"},    # case-insensitive
+    ]
+    kept = [r["id"] for r in rows if (r["index"] or "")[:1].upper() in wanted]
+    assert kept == ["1/A", "2/B", "5/a"]
+
+
+def test_empty_index_filter_keeps_everything():
+    from ladder.config import EvalConfig
+
+    assert EvalConfig().problem_indices == []

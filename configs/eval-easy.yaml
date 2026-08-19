@@ -1,0 +1,31 @@
+# Evaluation restricted to div2 A/B problems.
+#
+# Not a softer benchmark for its own sake -- a resolution fix. On a uniform
+# sample of Codeforces a 3B scores at or near zero, and 0/40 against 0/40 says
+# nothing about whether training helped: the effect being measured is smaller
+# than the smallest number the metric can express. Scoring where the model has
+# a non-zero chance makes the comparison able to move at all.
+#
+# The slice is part of the result and must be reported with it. A pass@1 on
+# div2 A/B is not comparable to a pass@1 on all of Codeforces.
+name: eval-easy
+
+data:
+  max_tokens: 8192
+  min_tokens: 256
+  val_fraction: 0.04
+  seed: 17
+
+model:
+  base_model: unsloth/Qwen2.5-Coder-3B-Instruct-bnb-4bit
+  max_seq_length: 8192
+
+eval:
+  problem_indices: ["A", "B"]
+  num_problems: 40
+  samples_per_problem: 1
+  max_new_tokens: 4096
+  temperature: 0.0
+  timeout_seconds: 8.0
+  max_tests_per_problem: 12
+  results_path: outputs/eval-easy/results.json

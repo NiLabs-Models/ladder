@@ -150,6 +150,17 @@ class EvalConfig:
     # you are judging a problem set where letter case genuinely carries meaning.
     case_sensitive: bool = False
 
+    # Restrict evaluation to problems whose contest index starts with one of
+    # these letters -- A and B are div2 openers, E and beyond are div1.
+    #
+    # This is about the metric having resolution, not about flattering the
+    # model. A small model scores near zero on a uniform sample of Codeforces,
+    # and 0/40 against 0/40 cannot show whether training helped: the difference
+    # being measured is smaller than the smallest number the metric can express.
+    # Reporting on an easier slice measures something real, as long as the slice
+    # is stated. Empty means no restriction.
+    problem_indices: list[str] = field(default_factory=list)
+
     results_path: str = "outputs/eval/results.json"
 
 
