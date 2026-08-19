@@ -26,6 +26,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SLUG = "ladder-qlora-codeforces"
+SMOKE_SLUG = "ladder-smoke"
 POLL_SECONDS = 300
 
 
@@ -55,18 +56,24 @@ def require_credentials() -> None:
     )
 
 
-def staging_dir(user: str) -> Path:
+def staging_dir(user: str, smoke: bool = False) -> Path:
     """Kaggle pushes a directory: one code file plus its metadata."""
     out = REPO_ROOT / "kaggle" / "_push"
     out.mkdir(parents=True, exist_ok=True)
 
-    (out / "ladder_kernel.py").write_text(
-        (REPO_ROOT / "kaggle" / "ladder_kernel.py").read_text(encoding="utf-8"),
-        encoding="utf-8",
-    )
+    source = (REPO_ROOT / "kaggle" / "ladder_kernel.py").read_text(encoding="utf-8")
+    if smoke:
+        # Kaggle has no way to pass parameters to a kernel, so the flag is set
+        # by a prelude prepended to the same source the real run uses. Running
+        # the same file is the point -- a smoke test of different code proves
+        # nothing about the run it is meant to de-risk.
+        source = ("import os\n"
+                  'os.environ["LADDER_SMOKE"] = "1"' + "\n\n"
+                  + source)
+    (out / "ladder_kernel.py").write_text(source, encoding="utf-8")
     metadata = {
-        "id": f"{user}/{SLUG}",
-        "title": "Ladder QLoRA Codeforces",
+        "id": f"{user}/{SMOKE_SLUG if smoke else SLUG}",
+        "title": "Ladder Smoke" if smoke else "Ladder QLoRA Codeforces",
         "code_file": "ladder_kernel.py",
         "language": "python",
         "kernel_type": "script",
@@ -93,9 +100,10 @@ def staging_dir(user: str) -> Path:
     return out
 
 
-def push(user: str) -> None:
-    out = staging_dir(user)
-    print(f"pushing {user}/{SLUG} (GPU on, internet on)")
+def push(user: str, smoke: bool = False) -> None:
+    out = staging_dir(user, smoke)
+    slug = SMOKE_SLUG if smoke else SLUG
+    print(f"pushing {user}/{slug} (T4, internet on)")
     result = kaggle("kernels", "push", "-p", str(out), check=False)
     print(result.stdout.strip() or result.stderr.strip())
     if result.returncode != 0:
@@ -166,6 +174,8 @@ def main() -> int:
     parser.add_argument("--status", action="store_true", help="print status and exit")
     parser.add_argument("--fetch", action="store_true", help="download results and exit")
     parser.add_argument("--no-wait", action="store_true", help="push and exit")
+    parser.add_argument("--smoke", action="store_true",
+                        help="20 steps and 3 eval problems, to its own slug")
     parser.add_argument("--timeout-hours", type=float, default=13.0)
     args = parser.parse_args()
 
@@ -177,7 +187,7 @@ def main() -> int:
     if args.fetch:
         return fetch(args.user)
 
-    push(args.user)
+    push(args.user, args.smoke)
     if args.no_wait:
         return 0
     return wait(args.user, args.timeout_hours)

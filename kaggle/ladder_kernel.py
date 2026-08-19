@@ -140,7 +140,23 @@ from ladder.config import load_config  # noqa: E402
 
 cfg = load_config(CONFIG)
 cfg.train.output_dir = f"{WORK}/outputs/ladder-3b-kaggle"
-save_status(config=cfg.to_dict())
+
+# Smoke mode runs the real model on the real data for a handful of steps. It
+# exists to prove the chain end to end -- masking, training, saving, loading the
+# adapter back, judging -- before a full session is committed to it. Every
+# failure so far was found in the first minutes of a run; this makes those
+# minutes cheap to buy on purpose.
+if os.environ.get("LADDER_SMOKE") == "1":
+    cfg.name = "smoke"
+    cfg.train.max_steps = 20
+    cfg.train.save_steps = 20
+    cfg.train.logging_steps = 1
+    cfg.eval.num_problems = 3
+    cfg.eval.max_new_tokens = 512
+    cfg.train.output_dir = f"{WORK}/outputs/smoke"
+    print("SMOKE MODE: 20 steps, 3 eval problems", flush=True)
+
+save_status(config=cfg.to_dict(), smoke=os.environ.get("LADDER_SMOKE") == "1")
 
 
 # --------------------------------------------------------------------------
