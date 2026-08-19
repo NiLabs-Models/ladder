@@ -116,6 +116,22 @@ def _kill_process_group(proc) -> None:
             pass
 
 
+def _reintroduced_preexec(memory_limit_mb: int):
+    """TEMPORARY: the original bug, restored to prove the test catches it."""
+    if os.name != "posix":
+        return None
+
+    import resource
+
+    def apply() -> None:
+        limit = memory_limit_mb * 1024 * 1024
+        resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
+        resource.setrlimit(resource.RLIMIT_NPROC, (64, 64))
+        os.setsid()
+
+    return apply
+
+
 def run_program(
     code: str,
     stdin: str,
@@ -166,6 +182,7 @@ def run_program(
                 # Own session, so a runaway program's children die with it.
                 # Thread-safe, unlike the preexec_fn this replaced.
                 start_new_session=(os.name == "posix"),
+                preexec_fn=_reintroduced_preexec(memory_limit_mb),
             )
         except OSError as exc:
             return RunResult(Verdict.RUNTIME_ERROR, stderr=str(exc))
