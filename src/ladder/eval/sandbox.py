@@ -83,15 +83,19 @@ def outputs_match(expected: str, actual: str, case_sensitive: bool = False) -> b
 
 # Rlimits are applied by a bootstrap *inside* the child rather than by
 # preexec_fn. preexec_fn runs between fork and exec and is documented as unsafe
-# in the presence of threads -- and verification calls this from a
-# ThreadPoolExecutor. On Kaggle that combination turned a 0.2s/trace job into
-# 93s/trace and burned a 12-hour GPU session in data prep. It was invisible
-# locally because _preexec returned None on Windows, so the path never ran.
+# in the presence of threads, and verification calls this from a
+# ThreadPoolExecutor -- so the combination was removed on principle.
 #
-# RLIMIT_NPROC is deliberately gone: it is a per-*user* limit on Linux, so in a
-# shared container where the user already has many processes, setting it to 64
-# breaks every subsequent fork. Runaway process spawning is handled instead by
-# start_new_session plus killing the whole process group on timeout.
+# It is NOT established that this caused the 12-hour Kaggle data-prep stall.
+# Reintroducing the exact original code on a branch passed Linux CI, so
+# preexec_fn plus threads does not stall on its own. See
+# kaggle/diagnose_dataprep.py, which measures the candidates on Kaggle itself.
+#
+# RLIMIT_NPROC is gone for a separate and concrete reason: it is a per-*user*
+# limit on Linux, so in a shared container whose user already has more than 64
+# processes, setting it to 64 breaks every subsequent fork. Runaway spawning is
+# contained instead by start_new_session plus killing the process group on
+# timeout.
 _BOOTSTRAP = """import resource, runpy, sys
 _limit = {mem_bytes}
 resource.setrlimit(resource.RLIMIT_AS, (_limit, _limit))
