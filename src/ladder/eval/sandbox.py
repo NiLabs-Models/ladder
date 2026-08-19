@@ -162,7 +162,7 @@ def run_program(
                 ),
                 encoding="utf-8",
             )
-            target = "_bootstrap.py"
+            target = "solution.py"
         else:
             target = "solution.py"
 
@@ -181,7 +181,6 @@ def run_program(
                 env=env,
                 # Own session, so a runaway program's children die with it.
                 # Thread-safe, unlike the preexec_fn this replaced.
-                start_new_session=(os.name == "posix"),
                 preexec_fn=_reintroduced_preexec(memory_limit_mb),
             )
         except OSError as exc:
