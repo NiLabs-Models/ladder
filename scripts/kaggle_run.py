@@ -133,7 +133,7 @@ def push(user: str, smoke: bool = False, stage: str = "all") -> None:
     print(result.stdout.strip() or result.stderr.strip())
     if result.returncode != 0:
         sys.exit(result.returncode)
-    print(f"\nrunning at https://www.kaggle.com/code/{user}/{SLUG}")
+    print(f"\nrunning at https://www.kaggle.com/code/{user}/{slug}")
 
 
 def status(user: str, slug: str = SLUG) -> str:
