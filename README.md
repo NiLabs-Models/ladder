@@ -85,8 +85,28 @@ ladder eval  --config configs/smoke-1.5b.yaml --adapter outputs/smoke-1.5b
 whole pipeline works end to end in about fifteen minutes, **before** you spend
 free GPU hours on `configs/ladder-3b-t4.yaml`. Run it first.
 
-For the real thing, [`notebooks/kaggle_ladder.ipynb`](notebooks/kaggle_ladder.ipynb)
-is a ready-to-run Kaggle notebook.
+### Running the real thing on Kaggle
+
+Kaggle's free tier has an API, so the whole run is scriptable — push, poll,
+collect. No notebook to babysit:
+
+```bash
+pip install kaggle          # credentials: kaggle.com/settings -> API -> Create New Token
+python scripts/kaggle_run.py --user <your-kaggle-username>
+```
+
+That pushes [`kaggle/ladder_kernel.py`](kaggle/ladder_kernel.py), which runs
+data prep, evaluates the untouched base model, trains, evaluates the fine-tune,
+and prints both numbers. It polls until the kernel finishes and downloads the
+results.
+
+The kernel writes each stage's outcome to `status.json` as it goes, so a session
+that hits Kaggle's 12-hour cap still leaves behind the base number and the
+trained adapter rather than nothing. `configs/ladder-3b-kaggle.yaml` is sized to
+land inside that cap with margin.
+
+[`notebooks/kaggle_ladder.ipynb`](notebooks/kaggle_ladder.ipynb) is the same
+pipeline as a notebook, if you would rather watch it run.
 
 ## Commands
 

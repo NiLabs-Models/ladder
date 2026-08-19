@@ -1,0 +1,57 @@
+# Sized to finish inside ONE Kaggle kernel session (12h hard cap), including
+# both evals. Budget roughly: data ~20m, base eval ~1.3h, train ~4h,
+# tuned eval ~1.3h. The margin is deliberate -- a kernel killed at the cap
+# loses the tuned eval, which is the only number anyone cares about.
+#
+# For a longer run once this one has landed, use configs/ladder-3b-t4.yaml.
+name: ladder-3b-kaggle
+
+data:
+  dataset: open-r1/codeforces-cots
+  config_name: solutions_py_decontaminated
+  split: train
+  max_tokens: 5120
+  min_tokens: 256
+  require_finish_reason: stop
+  dedup_by_problem: true
+  val_fraction: 0.04
+  seed: 17
+  # Cap the corpus so data prep is bounded. ~6k verified traces is plenty to
+  # move a 3B model on format and approach, which is what one epoch can do.
+  max_samples: 6000
+  verify_solutions: true
+  verify_max_tests: 4
+  verify_timeout: 5.0
+  verify_workers: 8
+
+model:
+  base_model: unsloth/Qwen2.5-Coder-3B-Instruct-bnb-4bit
+  max_seq_length: 6144
+  load_in_4bit: true
+  lora_r: 32
+  lora_alpha: 32
+  lora_dropout: 0.0
+
+train:
+  output_dir: /kaggle/working/outputs/ladder-3b-kaggle
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 16
+  num_train_epochs: 1.0
+  max_steps: 375          # ~6000 samples / 16 effective batch
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.03
+  lr_scheduler_type: cosine
+  optim: adamw_8bit
+  max_grad_norm: 0.5
+  logging_steps: 5
+  save_steps: 75
+  save_total_limit: 2
+
+eval:
+  num_problems: 60
+  samples_per_problem: 1
+  max_new_tokens: 3072
+  temperature: 0.0        # greedy: this is a capability measurement
+  timeout_seconds: 8.0
+  max_tests_per_problem: 12
+  results_path: /kaggle/working/outputs/eval/results.json
