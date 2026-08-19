@@ -122,8 +122,12 @@ run_stage("preflight", preflight)
 # 1. environment
 # --------------------------------------------------------------------------
 def setup():
-    sh("pip install -q -U 'unsloth==2025.9.1' 'unsloth_zoo==2025.9.1'")
-    sh("pip install -q 'trl>=0.9.6,<0.12' 'peft>=0.12.0' 'bitsandbytes>=0.43.0'")
+    # Unpinned on purpose. Pinning unsloth==2025.9.1 broke a run outright:
+    # Kaggle ships transformers 5.0.0, which that release predates badly enough
+    # that it cannot import. Let unsloth resolve its own stack, and pin trl or
+    # transformers only against a combination actually observed working.
+    sh("pip install -q -U unsloth unsloth_zoo")
+    sh("pip install -q -U bitsandbytes")
     if not os.path.isdir(REPO_DIR):
         sh(f"git clone -q {REPO} {REPO_DIR}")
     return True

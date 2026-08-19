@@ -75,6 +75,11 @@ def staging_dir(user: str) -> Path:
         # code already lives in a public repo; this is just the runner.
         "is_private": True,
         "enable_gpu": True,
+        # Ask for a T4 explicitly. Kaggle otherwise hands out P100s, which are
+        # Pascal (sm_60), and current torch builds ship no kernels for them:
+        # loading the model dies with "no kernel image is available for
+        # execution on the device". T4 is Turing (sm_75) and is supported.
+        "machine_shape": "NvidiaTeslaT4",
         # The kernel pip-installs unsloth and clones the repo.
         "enable_internet": True,
         "dataset_sources": [],

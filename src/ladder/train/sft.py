@@ -54,7 +54,6 @@ def train(cfg: RunConfig, data_dir: str | Path) -> str:
     import torch
     from datasets import load_dataset
     from transformers import TrainingArguments
-    from trl import SFTTrainer
 
     data_dir = Path(data_dir)
     train_file = data_dir / "train.jsonl"
@@ -99,15 +98,38 @@ def train(cfg: RunConfig, data_dir: str | Path) -> str:
         save_safetensors=True,
     )
 
-    trainer_kwargs = dict(
-        model=model,
-        tokenizer=tokenizer,
-        train_dataset=dataset["train"],
-        dataset_text_field="text",
-        max_seq_length=cfg.model.max_seq_length,
-        packing=False,  # Packing would blend two problems into one window.
-        args=args,
-    )
+    # trl's API moved: SFTConfig now carries what used to be TrainingArguments
+    # plus the dataset/length settings, SFTTrainer takes `processing_class`
+    # rather than `tokenizer`, and DataCollatorForCompletionOnlyLM is gone.
+    # Built by capability detection rather than a version pin -- pinning a
+    # version chosen without checking it against the target environment is what
+    # broke an earlier run outright.
+    import inspect
+
+    from trl import SFTConfig, SFTTrainer
+
+    sft_fields = set(inspect.signature(SFTConfig.__init__).parameters)
+    length_kwargs = {}
+    if "max_length" in sft_fields:
+        length_kwargs["max_length"] = cfg.model.max_seq_length
+    elif "max_seq_length" in sft_fields:
+        length_kwargs["max_seq_length"] = cfg.model.max_seq_length
+    if "dataset_text_field" in sft_fields:
+        length_kwargs["dataset_text_field"] = "text"
+    if "packing" in sft_fields:
+        # Packing would blend two problems into one window.
+        length_kwargs["packing"] = False
+
+    sft_args = SFTConfig(**{**vars(args), **length_kwargs}) if sft_fields else args
+
+    trainer_fields = set(inspect.signature(SFTTrainer.__init__).parameters)
+    trainer_kwargs = {
+        "model": model,
+        "train_dataset": dataset["train"],
+        "args": sft_args,
+    }
+    trainer_kwargs["processing_class" if "processing_class" in trainer_fields
+                   else "tokenizer"] = tokenizer
     if "validation" in dataset:
         trainer_kwargs["eval_dataset"] = dataset["validation"]
 
@@ -115,17 +137,26 @@ def train(cfg: RunConfig, data_dir: str | Path) -> str:
 
     if tcfg.train_on_completions_only:
         # Mask the prompt so loss is computed only over the model's own turn.
-        # These markers are Qwen/ChatML; a different base family needs its own.
-        from trl import DataCollatorForCompletionOnlyLM
+        # Unsloth's helper replaces trl's removed collator. If neither exists,
+        # say so loudly -- training on the full sequence silently produces a
+        # worse model with nothing in the logs to point at.
+        try:
+            from unsloth.chat_templates import train_on_responses_only
 
-        trainer.data_collator = DataCollatorForCompletionOnlyLM(
-            instruction_template="<|im_start|>user",
-            response_template="<|im_start|>assistant\n",
-            tokenizer=tokenizer,
-        )
+            trainer = train_on_responses_only(
+                trainer,
+                instruction_part="<|im_start|>user\n",
+                response_part="<|im_start|>assistant\n",
+            )
+            print("loss masked to the assistant turn", file=sys.stderr)
+        except ImportError as exc:
+            raise RuntimeError(
+                "train_on_completions_only is set but no masking helper is "
+                f"available ({exc}). Training would silently compute loss over "
+                "the problem statement too. Install a current unsloth, or set "
+                "train_on_completions_only: false to accept full-sequence loss."
+            ) from exc
 
-    if torch.cuda.is_available():
-        torch.cuda.reset_peak_memory_stats()
     stats = trainer.train()
 
     out_dir = Path(tcfg.output_dir)

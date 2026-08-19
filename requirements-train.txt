@@ -1,14 +1,20 @@
 # Installed only on the GPU box (Kaggle / Colab / rented T4-or-better).
-# Unsloth pins a compatible torch/transformers/trl/peft set for us, which is why
-# it is the only hard pin here -- letting pip resolve these independently on a
-# free-tier image is how you lose an hour of your 30 weekly Kaggle GPU hours.
-unsloth==2025.9.1
-unsloth_zoo==2025.9.1
+#
+# Deliberately NOT pinned. An earlier version pinned unsloth==2025.9.1 "for
+# determinism", and that pin is what broke the second run: Kaggle's image ships
+# transformers 5.0.0, which that unsloth predates so completely that it cannot
+# import (`NameError: PreTrainedConfig`). A pin chosen without checking it
+# against the target environment is not determinism, it is a guess with a
+# version number on it.
+#
+# unsloth resolves its own compatible transformers/trl/peft, so let it. If a
+# future run needs a frozen set, freeze one that has actually been observed
+# working -- see results/*/run_config.json for what a given run really used.
+unsloth
+unsloth_zoo
 bitsandbytes>=0.43.0
-trl>=0.9.6,<0.12
-peft>=0.12.0
-transformers>=4.44
-accelerate>=0.33
+
+# Used by data prep and the eval harness, independent of the training stack.
 datasets>=2.19
 huggingface_hub>=0.24
 pyyaml>=6.0
