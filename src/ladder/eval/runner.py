@@ -126,6 +126,7 @@ def evaluate(
 
     results: list[ProblemResult] = []
     verdict_counts: Counter[str] = Counter()
+    summary_samples: list[dict] = []
 
     for idx, problem in enumerate(problems, start=1):
         if problem.problem_id in already:
@@ -150,6 +151,20 @@ def evaluate(
                 record.verdicts.append(Verdict.NO_CODE.value)
                 record.tests_passed.append(0)
                 verdict_counts[Verdict.NO_CODE.value] += 1
+                # Keep the first one. A no_code verdict is undiagnosable from
+                # counts alone -- a degenerate repetition loop, a bare code
+                # block with no fence, and a genuine refusal all score the same
+                # and need completely different fixes.
+                if not summary_samples:
+                    summary_samples.append(
+                        {
+                            "problem_id": problem.problem_id,
+                            "chars": len(completion),
+                            "has_fence": "```" in completion,
+                            "head": completion[:600],
+                            "tail": completion[-400:],
+                        }
+                    )
                 continue
             verdict, passed = judge(
                 code,
@@ -185,6 +200,7 @@ def evaluate(
         "metrics": metrics,
         "verdicts": dict(verdict_counts),
         "problems": [asdict(r) for r in results],
+        "no_code_sample": summary_samples[0] if summary_samples else None,
     }
 
     out_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
