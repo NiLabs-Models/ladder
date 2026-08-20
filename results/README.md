@@ -27,7 +27,8 @@ way to publish a number that means nothing.
 | Run | Outcome |
 | --- | --- |
 | [2026-08-18-failed-run](2026-08-18-failed-run/) | Failed. Killed at the session cap during data prep; no model. |
-| [2026-08-19-train](2026-08-19-train/) | Adapter trained, 5.05h, 594.9 tok/s. **Not yet evaluated** — GPU quota exhausted. |
+| [2026-08-19-train](2026-08-19-train/) | Adapter trained, 5.05h, 594.9 tok/s. |
+| [2026-08-19-eval-easy](2026-08-19-eval-easy/) | Base vs tuned, div2 A/B. **Inconclusive** — 70% of tuned responses truncated before emitting code. |
 
 Failed runs are recorded too. A results directory that only holds successes is a
 worse record than no directory, and the failure above is where most of what this
