@@ -33,6 +33,11 @@ class ProblemResult:
     verdicts: list[str] = field(default_factory=list)
     tests_passed: list[int] = field(default_factory=list)
     n_tests: int = 0
+    # Length of each completion, so a `no_code` verdict can be told apart from a
+    # formatting failure. A no_code that ran to the token ceiling is truncation
+    # -- the model was still reasoning when the budget ran out -- and that is a
+    # flaw in the measurement, not a fact about the model.
+    completion_chars: list[int] = field(default_factory=list)
 
     @property
     def solved(self) -> bool:
@@ -139,6 +144,7 @@ def evaluate(
         )
 
         for completion in completions:
+            record.completion_chars.append(len(completion))
             code = extract_code(completion)
             if code is None:
                 record.verdicts.append(Verdict.NO_CODE.value)
@@ -188,6 +194,28 @@ def evaluate(
         _log(f"{key}: {value:.3f}")
     for verdict, count in verdict_counts.most_common():
         _log(f"  {verdict}: {count}")
+
+    # Call out truncation explicitly. A high no_code rate with long completions
+    # means the token budget is the binding constraint, and the numbers below it
+    # understate both models rather than comparing them.
+    no_code = [
+        length
+        for r in results
+        for v, length in zip(r.verdicts, r.completion_chars, strict=False)
+        if v == Verdict.NO_CODE.value
+    ]
+    if no_code:
+        share = len(no_code) / max(1, sum(len(r.verdicts) for r in results))
+        _log(
+            f"  no_code share: {share:.0%}, median completion "
+            f"{sorted(no_code)[len(no_code) // 2]} chars"
+        )
+        if share > 0.2:
+            _log(
+                "  WARNING: a fifth or more of responses contained no code. "
+                "If those ran to the token ceiling this is truncation, and "
+                "max_new_tokens is understating both models."
+            )
     _log(f"wrote {out_path}")
 
     return summary
